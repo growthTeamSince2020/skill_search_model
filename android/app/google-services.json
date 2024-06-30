@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "529573775474",
+    "project_id": "skill-search-model",
+    "storage_bucket": "skill-search-model.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:529573775474:android:e38fcfeb57b5e8e1261aeb",
+        "android_client_info": {
+          "package_name": "com.example.skill_search_model"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCUabXyWSZjdTs54PmQVJ6PcMZ-B86Wq6g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
