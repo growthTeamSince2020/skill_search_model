@@ -45,75 +45,47 @@ class _MyWidgetState extends State<MyWidget> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Container(
-                height: double.infinity,
-                alignment: Alignment.topCenter,
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('dream')
-                      .orderBy('createdAt')
-                      .snapshots(),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasError) {
-                      return Text(snapshot.error.toString());
-                    }
-                    if (!snapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    final list = snapshot.requireData.docs
-                        .map<String>((DocumentSnapshot document) {
-                      final documentData =
-                      document.data()! as Map<String, dynamic>;
-                      return documentData['content']! as String;
-                    }).toList();
-
-                    final reverseList = list.reversed.toList();
-
-                    return ListView.builder(
-                      itemCount: reverseList.length,
-                      itemBuilder: (BuildContext context, int index) {
-                        return Center(
-                          child: Text(
-                            reverseList[index],
-                            style: const TextStyle(fontSize: 20),
-                          ),
-                        );
-                      },
-                    );
-                  },
+      appBar: AppBar(
+        title: const Text('スキル検索モデル'),
+      ),
+      body: Container(
+        child: SizedBox(
+          width: double.infinity,
+          child: Column(
+            children: <Widget>[
+              const TextField(
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'キーワードを入力してください。',
                 ),
               ),
-            ),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    autofocus: true,
+              Row(
+                children: [
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.greenAccent,
+                        fixedSize: const Size(75, 25)
+                    ),
+                    child: const Text('検索'),
+                    onPressed: () {
+                      //TODO;
+                    },
                   ),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    final document = <String, dynamic>{
-                      'content': _controller.text,
-                      'createdAt': Timestamp.fromDate(DateTime.now()),
-                    };
-                    FirebaseFirestore.instance
-                        .collection('dream')
-                        .doc()
-                        .set(document);
-                    setState(_controller.clear);
-                  },
-                  child: const Text('送信'),
-                )
-              ],
-            )
-          ],
+                  const SizedBox(width: 10),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey,
+                        fixedSize: const Size(75, 25)
+                    ),
+                    child: const Text('クリア'),
+                    onPressed: () {
+                      //TODO;
+                    },
+                  ),
+                ],
+              )
+            ],
+          ),
         ),
       ),
     );
