@@ -36,6 +36,24 @@ class MyWidget extends StatefulWidget {
 class _MyWidgetState extends State<MyWidget> {
   final TextEditingController _controller = TextEditingController();
 
+  final labels = List<DataColumn>.generate(5, (int index) =>
+      DataColumn(label: Text("ラベル$index")
+      ), growable: false);
+
+  final values = List<DataRow>.generate(20, (int index) {
+    return DataRow(cells: [
+      DataCell(Text("山田$index郎")),
+      const DataCell(Text("男性")),
+      const DataCell(Text("2000/10/30")),
+      const DataCell(Text("東京都港区")),
+      const DataCell(Text("会社員")),
+    ]);
+  }, growable: false);
+
+  get columnList => labels;
+
+  get rowList => values;
+
   @override
   void dispose() {
     _controller.dispose();
@@ -69,6 +87,15 @@ class _MyWidgetState extends State<MyWidget> {
                     child: const Text('検索'),
                     onPressed: () {
                       //TODO;
+                      //  _table(labels,values);
+                      ListView(
+                        children: [
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: DataTable(columns: columnList, rows: rowList),
+                          )
+                        ],
+                      );
                     },
                   ),
                   const SizedBox(width: 10),
@@ -83,11 +110,22 @@ class _MyWidgetState extends State<MyWidget> {
                     },
                   ),
                 ],
-              )
+              ),
             ],
           ),
         ),
       ),
+    );
+  }
+  @override
+  Widget _table(List<DataColumn> columnList, List<DataRow> rowList) {
+    return ListView(
+      children: [
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: DataTable(columns: columnList, rows: rowList),
+        )
+      ],
     );
   }
 }
