@@ -39,6 +39,8 @@ class _MyWidgetState extends State<MyWidget> {
   final TextEditingController _controller = TextEditingController();
 
   final selectedIndex = <int>{};
+  String text = "";
+  String textdata = "";
 
   @override
   void dispose() {
@@ -57,11 +59,15 @@ class _MyWidgetState extends State<MyWidget> {
           width: double.infinity,
           child: Column(
             children: <Widget>[
-              const TextField(
+              TextField(
                 autofocus: true,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: 'キーワードを入力してください。',
                 ),
+                // 入力内容をtextに格納
+                onChanged: (value){
+                  text = value;
+                },
               ),
               Row(
                 children: [
@@ -72,6 +78,9 @@ class _MyWidgetState extends State<MyWidget> {
                     child: const Text('検索'),
                     onPressed: () {
                       //TODO;
+                      setState(() {
+                        textdata = text;
+                      });
                     },
                   ),
                   const SizedBox(width: 10),
