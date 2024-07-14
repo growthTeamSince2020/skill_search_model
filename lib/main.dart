@@ -34,25 +34,11 @@ class MyWidget extends StatefulWidget {
 }
 
 class _MyWidgetState extends State<MyWidget> {
+  final Stream<QuerySnapshot> _usersStream =
+      FirebaseFirestore.instance.collection('engineer').snapshots();
   final TextEditingController _controller = TextEditingController();
 
-  final labels = List<DataColumn>.generate(5, (int index) =>
-      DataColumn(label: Text("ラベル$index")
-      ), growable: false);
-
-  final values = List<DataRow>.generate(20, (int index) {
-    return DataRow(cells: [
-      DataCell(Text("山田$index郎")),
-      const DataCell(Text("男性")),
-      const DataCell(Text("2000/10/30")),
-      const DataCell(Text("東京都港区")),
-      const DataCell(Text("会社員")),
-    ]);
-  }, growable: false);
-
-  get columnList => labels;
-
-  get rowList => values;
+  final selectedIndex = <int>{};
 
   @override
   void dispose() {
@@ -82,28 +68,17 @@ class _MyWidgetState extends State<MyWidget> {
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.greenAccent,
-                        fixedSize: const Size(75, 25)
-                    ),
+                        fixedSize: const Size(75, 25)),
                     child: const Text('検索'),
                     onPressed: () {
                       //TODO;
-                      //  _table(labels,values);
-                      ListView(
-                        children: [
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: DataTable(columns: columnList, rows: rowList),
-                          )
-                        ],
-                      );
                     },
                   ),
                   const SizedBox(width: 10),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.grey,
-                        fixedSize: const Size(75, 25)
-                    ),
+                        fixedSize: const Size(75, 25)),
                     child: const Text('クリア'),
                     onPressed: () {
                       //TODO;
@@ -111,21 +86,40 @@ class _MyWidgetState extends State<MyWidget> {
                   ),
                 ],
               ),
+              Expanded(
+                child: Container(
+                    height: double.infinity,
+                    alignment: Alignment.topCenter,
+                    child: StreamBuilder<QuerySnapshot>(
+                        stream: _usersStream,
+                        builder: (BuildContext context,
+                            AsyncSnapshot<QuerySnapshot> snapshot) {
+                          if (snapshot.hasError) {
+                            return Text('Something went wrong');
+                          }
+
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return Text("Loading");
+                          }
+
+                          return ListView(
+                            children: snapshot.data!.docs
+                                .map((DocumentSnapshot document) {
+                              Map<String, dynamic> data =
+                                  document.data()! as Map<String, dynamic>;
+                              return ListTile(
+                                title: Text(data['last_name'].toString()),
+                                subtitle: Text(data['age'].toString()),
+                              );
+                            }).toList(),
+                          );
+                        })),
+              ),
             ],
           ),
         ),
       ),
-    );
-  }
-  @override
-  Widget _table(List<DataColumn> columnList, List<DataRow> rowList) {
-    return ListView(
-      children: [
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(columns: columnList, rows: rowList),
-        )
-      ],
     );
   }
 }
