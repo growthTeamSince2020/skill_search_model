@@ -35,7 +35,7 @@ class MyWidget extends StatefulWidget {
 
 class _MyWidgetState extends State<MyWidget> {
   final Stream<QuerySnapshot> _usersStream =
-  FirebaseFirestore.instance.collection('engineer').snapshots();
+      FirebaseFirestore.instance.collection('engineer').snapshots();
   final TextEditingController _controller = TextEditingController();
 
   final selectedIndex = <int>{};
@@ -48,7 +48,6 @@ class _MyWidgetState extends State<MyWidget> {
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('スキル検索モデル'),
@@ -104,8 +103,10 @@ class _MyWidgetState extends State<MyWidget> {
                             return Text("Loading");
                           }
 
-                          return DataTable(
-                            columns: [
+                          return SingleChildScrollView(
+                              scrollDirection: Axis.horizontal, //スクロールの方向、水平
+                            child: DataTable(
+                            columns: const [
                               DataColumn(label: Text('氏名')),
                               DataColumn(label: Text('年齢')),
                               DataColumn(label: Text('最寄駅')),
@@ -113,14 +114,29 @@ class _MyWidgetState extends State<MyWidget> {
                             ],
                             rows: List<DataRow>.generate(
                                 snapshot.data?.size as int,
-                                    (index) =>
-                                    DataRow(cells: [
-                                      DataCell(Text(snapshot.data?.docs[index]['last_name'] + snapshot.data?.docs[index]['first_name'])),
-                                      DataCell(Text(snapshot.data!.docs[index]['age'].toString())),
-                                      DataCell(Text(snapshot.data?.docs[index]['nearest_station_line_name'] + snapshot.data?.docs[index]['nearest_station_name'])),
-                                      DataCell(Text(snapshot.data?.docs[index]['coding_languages'] + " " + snapshot.data!.docs[index]['years_of_experience'].toString()+"年")),
+                                (index) => DataRow(cells: [
+                                      DataCell(Text(snapshot.data?.docs[index]
+                                              ['last_name'] +
+                                          snapshot.data?.docs[index]
+                                              ['first_name'])),
+                                      DataCell(Text(snapshot
+                                          .data!.docs[index]['age']
+                                          .toString())),
+                                      DataCell(Text(snapshot.data?.docs[index]
+                                              ['nearest_station_line_name'] +
+                                          snapshot.data?.docs[index]
+                                              ['nearest_station_name'])),
+                                      DataCell(Text(snapshot.data?.docs[index]
+                                              ['coding_languages'] +
+                                          " " +
+                                          snapshot
+                                              .data!
+                                              .docs[index]
+                                                  ['years_of_experience']
+                                              .toString() +
+                                          "年")),
                                     ])),
-                          );
+                          ));
                         })),
               ),
             ],
