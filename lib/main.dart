@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:logger/logger.dart';
 
 import 'firebase_options.dart';
 
@@ -37,9 +38,9 @@ class _MyWidgetState extends State<MyWidget> {
   final Stream<QuerySnapshot> _usersStream =
       FirebaseFirestore.instance.collection('engineer').snapshots();
   final TextEditingController _controller = TextEditingController();
-
+  final logger = Logger();//ロガーの宣言
   final selectedIndex = <int>{};
-  String text = "";
+  String newKeyWord = "";
   String textdata = "";
 
   @override
@@ -47,7 +48,6 @@ class _MyWidgetState extends State<MyWidget> {
     _controller.dispose();
     super.dispose();
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -60,13 +60,14 @@ class _MyWidgetState extends State<MyWidget> {
           child: Column(
             children: <Widget>[
               TextField(
+                controller: _controller,
                 autofocus: true,
                 decoration: const InputDecoration(
                   hintText: 'キーワードを入力してください。',
                 ),
                 // 入力内容をtextに格納
                 onChanged: (value){
-                  text = value;
+                  newKeyWord = value;
                 },
               ),
               Row(
@@ -77,9 +78,9 @@ class _MyWidgetState extends State<MyWidget> {
                         fixedSize: const Size(75, 25)),
                     child: const Text('検索'),
                     onPressed: () {
-                      //TODO;
                       setState(() {
-                        textdata = text;
+                        textdata = newKeyWord;
+                        logger.d("'検索ボタン押下　キーワード: ${textdata}'");
                       });
                     },
                   ),
@@ -91,6 +92,8 @@ class _MyWidgetState extends State<MyWidget> {
                     child: const Text('クリア'),
                     onPressed: () {
                       //TODO;
+                      logger.d("クリアボタンを押下");
+                      _controller.clear();
                     },
                   ),
                 ],
@@ -104,6 +107,7 @@ class _MyWidgetState extends State<MyWidget> {
                         builder: (BuildContext context,
                             AsyncSnapshot<QuerySnapshot> snapshot) {
                           if (snapshot.hasError) {
+                            logger.w("'Error: ${snapshot.error}'");
                             return Text('Something went wrong');
                           }
 
