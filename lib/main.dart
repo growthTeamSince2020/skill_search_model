@@ -33,12 +33,14 @@ class MyWidget extends StatefulWidget {
   @override
   State<MyWidget> createState() => _MyWidgetState();
 }
+
 //test
 class _MyWidgetState extends State<MyWidget> {
-  final Stream<QuerySnapshot> _usersStream =
-      FirebaseFirestore.instance.collection('engineer').snapshots();
+  // final Stream<QuerySnapshot> _usersStream =
+  //     FirebaseFirestore.instance.collection('engineer').snapshots();
+
   final TextEditingController _controller = TextEditingController();
-  final logger = Logger();//ロガーの宣言
+  final logger = Logger(); //ロガーの宣言
   final selectedIndex = <int>{};
   String newKeyWord = "";
   String textdata = "";
@@ -48,6 +50,7 @@ class _MyWidgetState extends State<MyWidget> {
     _controller.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -66,7 +69,7 @@ class _MyWidgetState extends State<MyWidget> {
                   hintText: 'キーワードを入力してください。',
                 ),
                 // 入力内容をtextに格納
-                onChanged: (value){
+                onChanged: (value) {
                   newKeyWord = value;
                 },
               ),
@@ -103,7 +106,7 @@ class _MyWidgetState extends State<MyWidget> {
                     height: double.infinity,
                     alignment: Alignment.topCenter,
                     child: StreamBuilder<QuerySnapshot>(
-                        stream: _usersStream,
+                        stream: getStream(),
                         builder: (BuildContext context,
                             AsyncSnapshot<QuerySnapshot> snapshot) {
                           if (snapshot.hasError) {
@@ -118,38 +121,40 @@ class _MyWidgetState extends State<MyWidget> {
 
                           return SingleChildScrollView(
                               scrollDirection: Axis.horizontal, //スクロールの方向、水平
-                            child: DataTable(
-                            columns: const [
-                              DataColumn(label: Text('氏名')),
-                              DataColumn(label: Text('年齢')),
-                              DataColumn(label: Text('最寄駅')),
-                              DataColumn(label: Text('使用言語 経験年数')),
-                            ],
-                            rows: List<DataRow>.generate(
-                                snapshot.data?.size as int,
-                                (index) => DataRow(cells: [
-                                      DataCell(Text(snapshot.data?.docs[index]
-                                              ['last_name'] +
-                                          snapshot.data?.docs[index]
-                                              ['first_name'])),
-                                      DataCell(Text(snapshot
-                                          .data!.docs[index]['age']
-                                          .toString())),
-                                      DataCell(Text(snapshot.data?.docs[index]
-                                              ['nearest_station_line_name'] +
-                                          snapshot.data?.docs[index]
-                                              ['nearest_station_name'])),
-                                      DataCell(Text(snapshot.data?.docs[index]
-                                              ['coding_languages'] +
-                                          " " +
-                                          snapshot
-                                              .data!
-                                              .docs[index]
-                                                  ['years_of_experience']
-                                              .toString() +
-                                          "年")),
-                                    ])),
-                          ));
+                              child: DataTable(
+                                columns: const [
+                                  DataColumn(label: Text('氏名')),
+                                  DataColumn(label: Text('年齢')),
+                                  DataColumn(label: Text('最寄駅')),
+                                  DataColumn(label: Text('使用言語 経験年数')),
+                                ],
+                                rows: List<DataRow>.generate(
+                                    snapshot.data?.size as int,
+                                    (index) => DataRow(cells: [
+                                          DataCell(Text(snapshot.data
+                                                  ?.docs[index]['last_name'] +
+                                              snapshot.data?.docs[index]
+                                                  ['first_name'])),
+                                          DataCell(Text(snapshot
+                                              .data!.docs[index]['age']
+                                              .toString())),
+                                          DataCell(Text(snapshot
+                                                      .data?.docs[index][
+                                                  'nearest_station_line_name'] +
+                                              snapshot.data?.docs[index]
+                                                  ['nearest_station_name'])),
+                                          DataCell(Text(snapshot
+                                                      .data?.docs[index]
+                                                  ['coding_languages'] +
+                                              " " +
+                                              snapshot
+                                                  .data!
+                                                  .docs[index]
+                                                      ['years_of_experience']
+                                                  .toString() +
+                                              "年")),
+                                        ])),
+                              ));
                         })),
               ),
             ],
@@ -157,5 +162,20 @@ class _MyWidgetState extends State<MyWidget> {
         ),
       ),
     );
+  }
+
+  Stream<QuerySnapshot> getStream() {
+    CollectionReference<Map<String, dynamic>> userStream = FirebaseFirestore.instance.collection('engineer');
+    Stream<QuerySnapshot> _usersStream = userStream.snapshots();
+
+    // newKeyWordに値が設定されていなかったら_userStreamを返す
+    // newKeyWordに値が設定されていたら、newKeyWordの値でDB検索を行い取得したデータを返す
+    if (newKeyWord != "") {
+      //検索条件記載する
+      // final Stream<QuerySnapshot> searchData = _engineer.where('last_name', isEqualTo: newKeyWord).snapshots();
+       _usersStream = userStream.orderBy("last_name").startAt([textdata]).endAt([textdata + '\uf8ff']).snapshots();
+      return _usersStream;
+    }
+    return _usersStream;
   }
 }
