@@ -38,6 +38,7 @@ class MyWidget extends StatefulWidget {
 class _MyWidgetState extends State<MyWidget> {
   // final Stream<QuerySnapshot> _usersStream =
   //     FirebaseFirestore.instance.collection('engineer').snapshots();
+  CollectionReference<Map<String, dynamic>> userStream = FirebaseFirestore.instance.collection('engineer');
 
   final TextEditingController _controller = TextEditingController();
   final logger = Logger(); //ロガーの宣言
@@ -85,6 +86,23 @@ class _MyWidgetState extends State<MyWidget> {
                         textdata = newKeyWord;
                         logger.d("'検索ボタン押下　キーワード: ${textdata}'");
                       });
+                    },
+                  ),
+                  ElevatedButton(//テスト作成ボタン
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.greenAccent,
+                        fixedSize: const Size(75, 25)),
+                    child: const Text('テスト挿入！'),
+                    onPressed: () {
+                      setState(() {
+                        for (int i = 4; i < 201; i++) {
+                          addUser(
+                              i,1,"java","太郎","遠藤","西武新宿線","所沢",4
+                          );
+                        }
+
+                logger.d("テストデータインサート");
+                        });
                     },
                   ),
                   const SizedBox(width: 10),
@@ -165,9 +183,7 @@ class _MyWidgetState extends State<MyWidget> {
   }
 
   Stream<QuerySnapshot> getStream() {
-    CollectionReference<Map<String, dynamic>> userStream = FirebaseFirestore.instance.collection('engineer');
     Stream<QuerySnapshot> _usersStream = userStream.snapshots();
-
     // newKeyWordに値が設定されていなかったら_userStreamを返す
     // newKeyWordに値が設定されていたら、newKeyWordの値でDB検索を行い取得したデータを返す
     if (newKeyWord != "") {
@@ -177,5 +193,26 @@ class _MyWidgetState extends State<MyWidget> {
       return _usersStream;
     }
     return _usersStream;
+  }
+
+Future<void> addUser(
+    int noVal,
+    int ageVal,
+    String coding_languagesVal,
+    String first_nameVal,
+    String last_nameVal,
+    String nearest_station_line_nameVal,
+    String nearest_station_nameVal,
+    int years_of_experienceVal) async {
+  userStream.add({
+    'no': noVal, //連番
+    'age': ageVal, //年齢
+    'coding_languages': coding_languagesVal, //経験言語
+    'first_name': first_nameVal, //名前
+    'last_name': last_nameVal, //苗字
+    'nearest_station_line_name': nearest_station_line_nameVal, //最寄沿線
+    'nearest_station_name': nearest_station_nameVal, //最寄駅
+    'years_of_experience': years_of_experienceVal //エンジニア経験年数
+  });
   }
 }
