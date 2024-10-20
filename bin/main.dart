@@ -2,8 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
+import 'package:skill_search_model/dao/engineer_repository.dart';
+import 'package:skill_search_model/db/postgres_database.dart';
 
-import 'firebase_options.dart';
+import 'package:skill_search_model/firebase_options.dart';
+
+import 'engineerAccesser.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,7 +42,8 @@ class MyWidget extends StatefulWidget {
 class _MyWidgetState extends State<MyWidget> {
   // final Stream<QuerySnapshot> _usersStream =
   //     FirebaseFirestore.instance.collection('engineer').snapshots();
-  CollectionReference<Map<String, dynamic>> userStream = FirebaseFirestore.instance.collection('engineer');
+  CollectionReference<Map<String, dynamic>> userStream =
+      FirebaseFirestore.instance.collection('engineer');
 
   final TextEditingController _controller = TextEditingController();
   final logger = Logger(); //ロガーの宣言
@@ -82,13 +87,15 @@ class _MyWidgetState extends State<MyWidget> {
                         fixedSize: const Size(75, 25)),
                     child: const Text('検索'),
                     onPressed: () {
+                      engineerAccesser;
                       setState(() {
                         textdata = newKeyWord;
-                        logger.d("'検索ボタン押下　キーワード: ${textdata}'");
+                        logger.d("'検索ボタン押下b　キーワード: ${textdata}'");
                       });
                     },
                   ),
-                  ElevatedButton(//テスト作成ボタン
+                  ElevatedButton(
+                    //テスト作成ボタン
                     style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.greenAccent,
                         fixedSize: const Size(75, 25)),
@@ -96,13 +103,11 @@ class _MyWidgetState extends State<MyWidget> {
                     onPressed: () {
                       setState(() {
                         for (int i = 4; i < 201; i++) {
-                          addUser(
-                              i,1,"java","太郎","遠藤","西武新宿線","所沢",4
-                          );
+                          addUser(i, 1, "java", "太郎", "遠藤", "西武新宿線", "所沢", 4);
                         }
 
-                logger.d("テストデータインサート");
-                        });
+                        logger.d("テストデータインサート");
+                      });
                     },
                   ),
                   const SizedBox(width: 10),
@@ -161,16 +166,17 @@ class _MyWidgetState extends State<MyWidget> {
                                                   'nearest_station_line_name'] +
                                               snapshot.data?.docs[index]
                                                   ['nearest_station_name'])),
-                                          DataCell(Text(snapshot
-                                                      .data?.docs[index]
-                                                  ['coding_languages'] +
-                                              " " +
+                                          DataCell(Text(
+                                              // snapshot
+                                              //         .data?.docs[index]
+                                              //     ['coding_languages'] +
+                                              // " " +
                                               snapshot
-                                                  .data!
-                                                  .docs[index]
-                                                      ['years_of_experience']
-                                                  .toString() +
-                                              "年")),
+                                                      .data!
+                                                      .docs[index][
+                                                          'years_of_experience']
+                                                      .toString() +
+                                                  "年")),
                                         ])),
                               ));
                         })),
@@ -189,30 +195,32 @@ class _MyWidgetState extends State<MyWidget> {
     if (newKeyWord != "") {
       //検索条件記載する
       // final Stream<QuerySnapshot> searchData = _engineer.where('last_name', isEqualTo: newKeyWord).snapshots();
-       _usersStream = userStream.orderBy("last_name").startAt([textdata]).endAt([textdata + '\uf8ff']).snapshots();
+      _usersStream = userStream
+          .orderBy("last_name")
+          .startAt([textdata]).endAt([textdata + '\uf8ff']).snapshots();
       return _usersStream;
     }
     return _usersStream;
   }
 
-Future<void> addUser(
-    int noVal,
-    int ageVal,
-    String coding_languagesVal,
-    String first_nameVal,
-    String last_nameVal,
-    String nearest_station_line_nameVal,
-    String nearest_station_nameVal,
-    int years_of_experienceVal) async {
-  userStream.add({
-    'no': noVal, //連番
-    'age': ageVal, //年齢
-    'coding_languages': coding_languagesVal, //経験言語
-    'first_name': first_nameVal, //名前
-    'last_name': last_nameVal, //苗字
-    'nearest_station_line_name': nearest_station_line_nameVal, //最寄沿線
-    'nearest_station_name': nearest_station_nameVal, //最寄駅
-    'years_of_experience': years_of_experienceVal //エンジニア経験年数
-  });
+  Future<void> addUser(
+      int noVal,
+      int ageVal,
+      String coding_languagesVal,
+      String first_nameVal,
+      String last_nameVal,
+      String nearest_station_line_nameVal,
+      String nearest_station_nameVal,
+      int years_of_experienceVal) async {
+    userStream.add({
+      'no': noVal, //連番
+      'age': ageVal, //年齢
+      'coding_languages': coding_languagesVal, //経験言語
+      'first_name': first_nameVal, //名前
+      'last_name': last_nameVal, //苗字
+      'nearest_station_line_name': nearest_station_line_nameVal, //最寄沿線
+      'nearest_station_name': nearest_station_nameVal, //最寄駅
+      'years_of_experience': years_of_experienceVal //エンジニア経験年数
+    });
   }
 }
