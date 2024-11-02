@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 
 import 'firebase_options.dart';
-
+//test
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
