@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import 'package:skill_search_model/firebase_options.dart';
 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
@@ -38,7 +37,8 @@ class MyWidget extends StatefulWidget {
 class _MyWidgetState extends State<MyWidget> {
   // final Stream<QuerySnapshot> _usersStream =
   //     FirebaseFirestore.instance.collection('engineer').snapshots();
-  CollectionReference<Map<String, dynamic>> userStream = FirebaseFirestore.instance.collection('engineer');
+  CollectionReference<Map<String, dynamic>> userStream =
+      FirebaseFirestore.instance.collection('engineer');
 
   final TextEditingController _controller = TextEditingController();
   final logger = Logger(); //ロガーの宣言
@@ -88,7 +88,8 @@ class _MyWidgetState extends State<MyWidget> {
                       });
                     },
                   ),
-                  ElevatedButton(//テスト作成ボタン
+                  ElevatedButton(
+                    //テスト作成ボタン
                     style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.greenAccent,
                         fixedSize: const Size(75, 25)),
@@ -96,13 +97,11 @@ class _MyWidgetState extends State<MyWidget> {
                     onPressed: () {
                       setState(() {
                         for (int i = 4; i < 201; i++) {
-                          addUser(
-                              i,1,"java","太郎","遠藤","西武新宿線","所沢",4
-                          );
+                          addUser(i, "太郎", "遠藤", 30, "西武新宿線", "所沢", "java", 4);
                         }
 
-                logger.d("テストデータインサート");
-                        });
+                        logger.d("テストデータインサート");
+                      });
                     },
                   ),
                   const SizedBox(width: 10),
@@ -144,32 +143,32 @@ class _MyWidgetState extends State<MyWidget> {
                                   DataColumn(label: Text('氏名')),
                                   DataColumn(label: Text('年齢')),
                                   DataColumn(label: Text('最寄駅')),
-                                  DataColumn(label: Text('使用言語 経験年数')),
+                                  // DataColumn(label: Text('使用言語 経験年数')),
+                                  DataColumn(label: Text('使用言語')),
+                                  DataColumn(label: Text('経験年数')),
                                 ],
                                 rows: List<DataRow>.generate(
                                     snapshot.data?.size as int,
                                     (index) => DataRow(cells: [
                                           DataCell(Text(snapshot.data
-                                                  ?.docs[index]['last_name'] +
+                                                  ?.docs[index]['3_last_name'] +
                                               snapshot.data?.docs[index]
-                                                  ['first_name'])),
+                                                  ['2_first_name'])),
                                           DataCell(Text(snapshot
-                                              .data!.docs[index]['age']
+                                              .data!.docs[index]['4_age']
                                               .toString())),
                                           DataCell(Text(snapshot
                                                       .data?.docs[index][
-                                                  'nearest_station_line_name'] +
+                                                  '5_nearest_station_line_name'] +
                                               snapshot.data?.docs[index]
-                                                  ['nearest_station_name'])),
+                                                  ['6_nearest_station_name'])),
                                           DataCell(Text(
-                                              // snapshot
-                                              //         .data?.docs[index]
-                                              //     ['coding_languages'] +
-                                              // " " +
-                                              snapshot
+                                              snapshot.data?.docs[index]
+                                                  ['7_code_languages'])),
+                                          DataCell(Text(snapshot
                                                   .data!
                                                   .docs[index]
-                                                      ['years_of_experience']
+                                                      ['8_years_of_experience']
                                                   .toString() +
                                               "年")),
                                         ])),
@@ -190,30 +189,34 @@ class _MyWidgetState extends State<MyWidget> {
     if (newKeyWord != "") {
       //検索条件記載する
       // final Stream<QuerySnapshot> searchData = _engineer.where('last_name', isEqualTo: newKeyWord).snapshots();
-       _usersStream = userStream.orderBy("last_name").startAt([textdata]).endAt([textdata + '\uf8ff']).snapshots();
+      _usersStream = userStream
+          .orderBy("3_last_name")
+          .startAt([textdata]).endAt([textdata + '\uf8ff']).snapshots();
       return _usersStream;
     }
     return _usersStream;
   }
 
-Future<void> addUser(
-    int noVal,
-    int ageVal,
-    String coding_languagesVal,
-    String first_nameVal,
-    String last_nameVal,
-    String nearest_station_line_nameVal,
-    String nearest_station_nameVal,
-    int years_of_experienceVal) async {
-  userStream.add({
-    'no': noVal, //連番
-    'age': ageVal, //年齢
-    'coding_languages': coding_languagesVal, //経験言語
-    'first_name': first_nameVal, //名前
-    'last_name': last_nameVal, //苗字
-    'nearest_station_line_name': nearest_station_line_nameVal, //最寄沿線
-    'nearest_station_name': nearest_station_nameVal, //最寄駅
-    'years_of_experience': years_of_experienceVal //エンジニア経験年数
-  });
+  Future<void> addUser(
+      int idVal,
+      String first_nameVal,
+      String last_nameVal,
+      int ageVal,
+      String nearest_station_line_nameVal,
+      String nearest_station_nameVal,
+      // String coding_languagesVal,
+      String code_languagesVal,
+      int years_of_experienceVal) async {
+    userStream.add({
+      '1_id': idVal, //連番
+      '2_first_name': first_nameVal, //名前
+      '3_last_name': last_nameVal, //苗字
+      '4_age': ageVal, //年齢
+      '5_nearest_station_line_name': nearest_station_line_nameVal, //最寄沿線
+      '6_nearest_station_name': nearest_station_nameVal, //最寄駅
+      //'coding_languages': coding_languagesVal, //経験言語
+      '7_code_languages': code_languagesVal, //経験言語
+      '8_years_of_experience': years_of_experienceVal //エンジニア経験年数
+    });
   }
 }
