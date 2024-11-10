@@ -45,6 +45,7 @@ class _MyWidgetState extends State<MyWidget> {
   final selectedIndex = <int>{};
   String newKeyWord = "";
   String textdata = "";
+  String dropdownSelectedValue = "java";
 
   @override
   void dispose() {
@@ -59,9 +60,11 @@ class _MyWidgetState extends State<MyWidget> {
         title: const Text('スキル検索モデル'),
       ),
       body: Container(
+        margin: EdgeInsets.all(50),
         child: SizedBox(
           width: double.infinity,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               TextField(
                 controller: _controller,
@@ -73,6 +76,25 @@ class _MyWidgetState extends State<MyWidget> {
                 onChanged: (value) {
                   newKeyWord = value;
                 },
+              ),
+              //プルダウン　経験言語
+              DropdownButton<String>(
+                value: dropdownSelectedValue,
+                onChanged: (String? value) {
+                  // selectedValue = value!;
+                  setState(() {
+                    dropdownSelectedValue = value!;
+                    logger.d("'プルダウン押下　値変更: ${value}'");
+                  });
+                },
+                //TODO:別リストをどこかで持ちたい→テーブル化→汎用テーブル
+                items: <String>['java', 'c', 'C#']
+                    .map<DropdownMenuItem<String>>((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
               ),
               Row(
                 children: [
@@ -186,12 +208,15 @@ class _MyWidgetState extends State<MyWidget> {
     Stream<QuerySnapshot> _usersStream = userStream.snapshots();
     // newKeyWordに値が設定されていなかったら_userStreamを返す
     // newKeyWordに値が設定されていたら、newKeyWordの値でDB検索を行い取得したデータを返す
+    //TODO:検索条件編集フラグをみて（編集されたらTURE）検索をかける
     if (newKeyWord != "") {
       //検索条件記載する
       // final Stream<QuerySnapshot> searchData = _engineer.where('last_name', isEqualTo: newKeyWord).snapshots();
       _usersStream = userStream
           .orderBy("3_last_name")
           .startAt([textdata]).endAt([textdata + '\uf8ff']).snapshots();
+      //検索条件フォームをとってきて、検索実行
+      //プルダウンの
       return _usersStream;
     }
     return _usersStream;
