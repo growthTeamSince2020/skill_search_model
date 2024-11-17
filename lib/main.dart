@@ -45,8 +45,8 @@ class _MyWidgetState extends State<MyWidget> {
   final selectedIndex = <int>{};
   String newKeyWord = "";
   String textdata = "";
-  String dropdownSelectedValue = "java";
-
+  String codeLanguagesDropdownSelectedValue = "";
+  int ageDropdownSelectedValue = 0;
   @override
   void dispose() {
     _controller.dispose();
@@ -77,24 +77,47 @@ class _MyWidgetState extends State<MyWidget> {
                   newKeyWord = value;
                 },
               ),
-              //プルダウン　経験言語
-              DropdownButton<String>(
-                value: dropdownSelectedValue,
-                onChanged: (String? value) {
-                  // selectedValue = value!;
-                  setState(() {
-                    dropdownSelectedValue = value!;
-                    logger.d("'プルダウン押下　値変更: ${value}'");
-                  });
-                },
-                //TODO:別リストをどこかで持ちたい→テーブル化→汎用テーブル
-                items: <String>['java', 'c', 'C#']
-                    .map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
+              Row(
+                children: [
+                  //プルダウン　経験言語
+                  DropdownButton<String>(
+                    value: codeLanguagesDropdownSelectedValue,
+                    onChanged: (String? value) {
+                      // selectedValue = value!;
+                      setState(() {
+                        codeLanguagesDropdownSelectedValue = value!;
+                        logger.d("'プルダウン押下　値変更: ${value}'");
+                      });
+                    },
+                    //TODO:別リストをどこかで持ちたい→テーブル化→汎用テーブル
+                    items: <String>['', 'java', 'C', 'C#']
+                        .map<DropdownMenuItem<String>>((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(width: 10),
+                  //プルダウン　年齢
+                  DropdownButton<int>(
+                    value: ageDropdownSelectedValue,
+                      //TODO:別リストをどこかで持ちたい→テーブル化→汎用テーブル
+                      items: [
+                        DropdownMenuItem(value: 0,child: Text('')),
+                        DropdownMenuItem(value: 30,child: Text('30歳以下')),
+                        DropdownMenuItem(value: 40,child: Text('40歳以下')),
+                        DropdownMenuItem(value: 50,child: Text('50歳以下')),
+                      ],
+                    onChanged: (int? ageValue) {
+                      // selectedValue = value!;
+                      setState(() {
+                        ageDropdownSelectedValue = ageValue!;
+                        logger.d("'プルダウン押下　値変更: ${ageValue}'");
+                      });
+                    },
+                  ),
+                ],
               ),
               Row(
                 children: [
@@ -110,12 +133,13 @@ class _MyWidgetState extends State<MyWidget> {
                       });
                     },
                   ),
+                  const SizedBox(width: 10),
                   ElevatedButton(
                     //テスト作成ボタン
                     style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.greenAccent,
                         fixedSize: const Size(75, 25)),
-                    child: const Text('テスト挿入！'),
+                    child: const Text('登録'),
                     onPressed: () {
                       setState(() {
                         for (int i = 4; i < 201; i++) {
@@ -209,12 +233,28 @@ class _MyWidgetState extends State<MyWidget> {
     // newKeyWordに値が設定されていなかったら_userStreamを返す
     // newKeyWordに値が設定されていたら、newKeyWordの値でDB検索を行い取得したデータを返す
     //TODO:検索条件編集フラグをみて（編集されたらTURE）検索をかける
+    bool serachFlag = true;
+    if (codeLanguagesDropdownSelectedValue.isEmpty || ageDropdownSelectedValue == 0) {
+      serachFlag = false;
+    }
+    if (serachFlag) {
+      //TODO：検索条件複数パターンをここに記載したいが、そもそも可変式条件はできるのか？
+      _usersStream = userStream
+          .where("7_code_languages", isEqualTo: codeLanguagesDropdownSelectedValue)
+          .where("4_age", isEqualTo: ageDropdownSelectedValue)
+          .snapshots();
+      return _usersStream;
+    } else {
+      _usersStream = userStream.snapshots();
+      return _usersStream;
+    }
+
     if (newKeyWord != "") {
       //検索条件記載する
       // final Stream<QuerySnapshot> searchData = _engineer.where('last_name', isEqualTo: newKeyWord).snapshots();
-      _usersStream = userStream
-          .orderBy("3_last_name")
-          .startAt([textdata]).endAt([textdata + '\uf8ff']).snapshots();
+      // _usersStream = userStream
+      //     .orderBy("3_last_name")
+      //     .startAt([textdata]).endAt([textdata + '\uf8ff']).snapshots();
       //検索条件フォームをとってきて、検索実行
       //プルダウンの
       return _usersStream;
