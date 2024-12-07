@@ -58,7 +58,7 @@ class _MyWidgetState extends State<MyWidget> {
     FirebaseFirestore.instance
         .collection('utilData')
         .where("type", isEqualTo: utilDataSelectedType)
-        //.orderBy("sortNo")
+        .orderBy("sortNo")
         .get()
         .then((QuerySnapshot querySnapshot) {
       List<dynamic> allData = querySnapshot.docs.map((doc) => doc.data()).toList();
