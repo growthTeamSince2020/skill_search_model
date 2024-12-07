@@ -102,7 +102,7 @@ class _MyWidgetState extends State<MyWidget> {
                   //プルダウン　年齢
                   DropdownButton<int>(
                     value: ageDropdownSelectedValue,
-                      //TODO:別リストをどこかで持ちたい→テーブル化→汎用テーブル
+                      //TODO:別リストをどこかで持ちたい→テーブル化→汎用テーブル　
                       items: [
                         DropdownMenuItem(value: 0,child: Text('')),
                         DropdownMenuItem(value: 30,child: Text('30歳以下')),
