@@ -197,24 +197,24 @@ class _MyWidgetState extends State<MyWidget> {
                                     snapshot.data?.size as int,
                                     (index) => DataRow(cells: [
                                           DataCell(Text(snapshot.data
-                                                  ?.docs[index]['3_last_name'] +
+                                                  ?.docs[index]['last_name'] +
                                               snapshot.data?.docs[index]
-                                                  ['2_first_name'])),
+                                                  ['first_name'])),
                                           DataCell(Text(snapshot
-                                              .data!.docs[index]['4_age']
+                                              .data!.docs[index]['age']
                                               .toString())),
                                           DataCell(Text(snapshot
                                                       .data?.docs[index][
-                                                  '5_nearest_station_line_name'] +
+                                                  'nearest_station_line_name'] +
                                               snapshot.data?.docs[index]
-                                                  ['6_nearest_station_name'])),
+                                                  ['nearest_station_name'])),
                                           DataCell(Text(
                                               snapshot.data?.docs[index]
-                                                  ['7_code_languages'])),
+                                                  ['code_languages'])),
                                           DataCell(Text(snapshot
                                                   .data!
                                                   .docs[index]
-                                                      ['8_years_of_experience']
+                                                      ['years_of_experience']
                                                   .toString() +
                                               "年")),
                                         ])),
@@ -229,38 +229,62 @@ class _MyWidgetState extends State<MyWidget> {
   }
 
   Stream<QuerySnapshot> getStream() {
-    Stream<QuerySnapshot> _usersStream = userStream.snapshots();
-    // newKeyWordに値が設定されていなかったら_userStreamを返す
-    // newKeyWordに値が設定されていたら、newKeyWordの値でDB検索を行い取得したデータを返す
-    //TODO:検索条件編集フラグをみて（編集されたらTURE）検索をかける
-    bool serachFlag = true;
-    if (codeLanguagesDropdownSelectedValue.isEmpty || ageDropdownSelectedValue == 0) {
-      serachFlag = false;
-    }
-    if (serachFlag) {
-      //TODO：検索条件複数パターンをここに記載したいが、そもそも可変式条件はできるのか？
-      _usersStream = userStream
-          .where("7_code_languages", isEqualTo: codeLanguagesDropdownSelectedValue)
-          .where("4_age", isEqualTo: ageDropdownSelectedValue)
-          .snapshots();
-      return _usersStream;
-    } else {
-      _usersStream = userStream.snapshots();
-      return _usersStream;
-    }
+    final CollectionReference users = FirebaseFirestore.instance.collection('engineer');
 
-    if (newKeyWord != "") {
-      //検索条件記載する
-      // final Stream<QuerySnapshot> searchData = _engineer.where('last_name', isEqualTo: newKeyWord).snapshots();
-      // _usersStream = userStream
-      //     .orderBy("3_last_name")
-      //     .startAt([textdata]).endAt([textdata + '\uf8ff']).snapshots();
-      //検索条件フォームをとってきて、検索実行
-      //プルダウンの
-      return _usersStream;
+    // 検索条件のリストを作成 (必要に応じて拡張)
+    // List<Query> conditions = [];
+    // 検索条件を元にクエリを作成
+    Query query = users;
+    if (codeLanguagesDropdownSelectedValue.isNotEmpty) {
+      // conditions.add(where("code_languages", isEqualTo: codeLanguagesDropdownSelectedValue));
+      query = query.where("code_languages", isEqualTo: codeLanguagesDropdownSelectedValue);
     }
-    return _usersStream;
+    if (ageDropdownSelectedValue != 0) {
+      query = query.where("age", isLessThanOrEqualTo: ageDropdownSelectedValue);
+    }
+    // 条件が一つもない場合は、全ドキュメントを取得
+    // Query query = conditions.isEmpty ? users : users.where(conditions.first);
+    // conditions.skip(1).forEach((condition) => query = query.where(condition));
+
+    return query.snapshots();
   }
+  // Stream<QuerySnapshot> getStream() {
+    // Stream<QuerySnapshot> _usersStream = userStream.snapshots();
+    // // newKeyWordに値が設定されていなかったら_userStreamを返す
+    // // newKeyWordに値が設定されていたら、newKeyWordの値でDB検索を行い取得したデータを返す
+    // //TODO:検索条件編集フラグをみて（編集されたらTURE）検索をかける
+    // //条件がデェフォルトでないもののみを検索条件として追加したい
+    // //それぞれの検索フォームの検索条件フラグをみて、ひとつ一つ確認して追加する？
+    // //userStreamのwere文の追加の仕方が不明。。
+    // bool serachFlag = false;
+    // if (!codeLanguagesDropdownSelectedValue.isEmpty || ageDropdownSelectedValue != 0) {
+    //   serachFlag = true;
+    // }
+    // if (serachFlag) {
+    //   //TODO：検索条件複数パターンをここに記載したいが、そもそも可変式条件はできるのか？
+    //
+    //   _usersStream = userStream
+    //       .where("code_languages", isEqualTo: codeLanguagesDropdownSelectedValue)
+    //       .where("age", isEqualTo: ageDropdownSelectedValue)
+    //       .snapshots();
+    //   return _usersStream;
+    // } else {
+    //   _usersStream = userStream.snapshots();
+    //   return _usersStream;
+    // }
+
+  //   if (newKeyWord != "") {
+  //     //検索条件記載する
+  //     // final Stream<QuerySnapshot> searchData = _engineer.where('last_name', isEqualTo: newKeyWord).snapshots();
+  //     // _usersStream = userStream
+  //     //     .orderBy("last_name")
+  //     //     .startAt([textdata]).endAt([textdata + '\uf8ff']).snapshots();
+  //     //検索条件フォームをとってきて、検索実行
+  //     //プルダウンの
+  //     return _usersStream;
+  //   }
+  //   return _usersStream;
+  // }
 
   Future<void> addUser(
       int idVal,
@@ -273,15 +297,15 @@ class _MyWidgetState extends State<MyWidget> {
       String code_languagesVal,
       int years_of_experienceVal) async {
     userStream.add({
-      '1_id': idVal, //連番
-      '2_first_name': first_nameVal, //名前
-      '3_last_name': last_nameVal, //苗字
-      '4_age': ageVal, //年齢
-      '5_nearest_station_line_name': nearest_station_line_nameVal, //最寄沿線
-      '6_nearest_station_name': nearest_station_nameVal, //最寄駅
+      'id': idVal, //連番
+      'first_name': first_nameVal, //名前
+      'last_name': last_nameVal, //苗字
+      'age': ageVal, //年齢
+      'nearest_station_line_name': nearest_station_line_nameVal, //最寄沿線
+      'nearest_station_name': nearest_station_nameVal, //最寄駅
       //'coding_languages': coding_languagesVal, //経験言語
-      '7_code_languages': code_languagesVal, //経験言語
-      '8_years_of_experience': years_of_experienceVal //エンジニア経験年数
+      'code_languages': code_languagesVal, //経験言語
+      'years_of_experience': years_of_experienceVal //エンジニア経験年数
     });
   }
 }
