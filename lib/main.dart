@@ -201,7 +201,8 @@ class _MyWidgetState extends State<MyWidget> {
                           }
 
                           return SingleChildScrollView(
-                              scrollDirection: Axis.horizontal, //スクロールの方向、水平
+                              scrollDirection: Axis.vertical, //スクロールの方向、垂直
+
                               child: DataTable(
                                 columns: const [
                                   DataColumn(label: Text('氏名')),
