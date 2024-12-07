@@ -33,16 +33,14 @@ class MyWidget extends StatefulWidget {
   State<MyWidget> createState() => _MyWidgetState();
 }
 
-//test
 class _MyWidgetState extends State<MyWidget> {
-  // final Stream<QuerySnapshot> _usersStream =
-  //     FirebaseFirestore.instance.collection('engineer').snapshots();
-  CollectionReference<Map<String, dynamic>> userStream =
-      FirebaseFirestore.instance.collection('engineer');
+  final CollectionReference engineer = FirebaseFirestore.instance.collection('engineer');
 
   final TextEditingController _controller = TextEditingController();
   final logger = Logger(); //ロガーの宣言
   final selectedIndex = <int>{};
+  final String utilDataSelectedType = "code_languages";
+  List<String> codeLanguagesItems = [];
   String newKeyWord = "";
   String textdata = "";
   String codeLanguagesDropdownSelectedValue = "";
@@ -51,6 +49,23 @@ class _MyWidgetState extends State<MyWidget> {
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+  @override
+  void initState() {
+    super.initState();
+    // Firestoreからデータを取得してcodeLanguagesItemsリストに格納
+    FirebaseFirestore.instance
+        .collection('utilData')
+        .where("type", isEqualTo: utilDataSelectedType)
+        .get()
+        .then((QuerySnapshot querySnapshot) {
+      List<dynamic> allData = querySnapshot.docs.map((doc) => doc.data()).toList();
+      setState(() {
+        // 例: ドキュメントの"name"フィールドをプルダウンのアイテムとする
+        codeLanguagesItems = allData.map((data) => data['val'] as String).toList();
+        logger.d("チェック: ${codeLanguagesItems}'");
+      });
+    });
   }
 
   @override
@@ -90,11 +105,11 @@ class _MyWidgetState extends State<MyWidget> {
                       });
                     },
                     //TODO:別リストをどこかで持ちたい→テーブル化→汎用テーブル
-                    items: <String>['', 'java', 'C', 'C#']
+                    items: codeLanguagesItems
                         .map<DropdownMenuItem<String>>((String value) {
                       return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(value),
+                      value: value,
+                      child: Text(value),
                       );
                     }).toList(),
                   ),
@@ -229,62 +244,18 @@ class _MyWidgetState extends State<MyWidget> {
   }
 
   Stream<QuerySnapshot> getStream() {
-    final CollectionReference users = FirebaseFirestore.instance.collection('engineer');
-
-    // 検索条件のリストを作成 (必要に応じて拡張)
-    // List<Query> conditions = [];
     // 検索条件を元にクエリを作成
-    Query query = users;
+    // TODO:Firebaseのインデックス管理は下記の記載順と同じにする
+    Query query = engineer;
     if (codeLanguagesDropdownSelectedValue.isNotEmpty) {
-      // conditions.add(where("code_languages", isEqualTo: codeLanguagesDropdownSelectedValue));
       query = query.where("code_languages", isEqualTo: codeLanguagesDropdownSelectedValue);
     }
     if (ageDropdownSelectedValue != 0) {
       query = query.where("age", isLessThanOrEqualTo: ageDropdownSelectedValue);
     }
-    // 条件が一つもない場合は、全ドキュメントを取得
-    // Query query = conditions.isEmpty ? users : users.where(conditions.first);
-    // conditions.skip(1).forEach((condition) => query = query.where(condition));
 
     return query.snapshots();
   }
-  // Stream<QuerySnapshot> getStream() {
-    // Stream<QuerySnapshot> _usersStream = userStream.snapshots();
-    // // newKeyWordに値が設定されていなかったら_userStreamを返す
-    // // newKeyWordに値が設定されていたら、newKeyWordの値でDB検索を行い取得したデータを返す
-    // //TODO:検索条件編集フラグをみて（編集されたらTURE）検索をかける
-    // //条件がデェフォルトでないもののみを検索条件として追加したい
-    // //それぞれの検索フォームの検索条件フラグをみて、ひとつ一つ確認して追加する？
-    // //userStreamのwere文の追加の仕方が不明。。
-    // bool serachFlag = false;
-    // if (!codeLanguagesDropdownSelectedValue.isEmpty || ageDropdownSelectedValue != 0) {
-    //   serachFlag = true;
-    // }
-    // if (serachFlag) {
-    //   //TODO：検索条件複数パターンをここに記載したいが、そもそも可変式条件はできるのか？
-    //
-    //   _usersStream = userStream
-    //       .where("code_languages", isEqualTo: codeLanguagesDropdownSelectedValue)
-    //       .where("age", isEqualTo: ageDropdownSelectedValue)
-    //       .snapshots();
-    //   return _usersStream;
-    // } else {
-    //   _usersStream = userStream.snapshots();
-    //   return _usersStream;
-    // }
-
-  //   if (newKeyWord != "") {
-  //     //検索条件記載する
-  //     // final Stream<QuerySnapshot> searchData = _engineer.where('last_name', isEqualTo: newKeyWord).snapshots();
-  //     // _usersStream = userStream
-  //     //     .orderBy("last_name")
-  //     //     .startAt([textdata]).endAt([textdata + '\uf8ff']).snapshots();
-  //     //検索条件フォームをとってきて、検索実行
-  //     //プルダウンの
-  //     return _usersStream;
-  //   }
-  //   return _usersStream;
-  // }
 
   Future<void> addUser(
       int idVal,
@@ -296,14 +267,13 @@ class _MyWidgetState extends State<MyWidget> {
       // String coding_languagesVal,
       String code_languagesVal,
       int years_of_experienceVal) async {
-    userStream.add({
+    engineer.add({
       'id': idVal, //連番
       'first_name': first_nameVal, //名前
       'last_name': last_nameVal, //苗字
       'age': ageVal, //年齢
       'nearest_station_line_name': nearest_station_line_nameVal, //最寄沿線
       'nearest_station_name': nearest_station_nameVal, //最寄駅
-      //'coding_languages': coding_languagesVal, //経験言語
       'code_languages': code_languagesVal, //経験言語
       'years_of_experience': years_of_experienceVal //エンジニア経験年数
     });
