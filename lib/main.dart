@@ -45,6 +45,7 @@ class _MyWidgetState extends State<MyWidget> {
   String textdata = "";
   String codeLanguagesDropdownSelectedValue = "";
   int ageDropdownSelectedValue = 0;
+
   @override
   void dispose() {
     _controller.dispose();
@@ -57,6 +58,7 @@ class _MyWidgetState extends State<MyWidget> {
     FirebaseFirestore.instance
         .collection('utilData')
         .where("type", isEqualTo: utilDataSelectedType)
+        //.orderBy("sortNo")
         .get()
         .then((QuerySnapshot querySnapshot) {
       List<dynamic> allData = querySnapshot.docs.map((doc) => doc.data()).toList();
@@ -104,6 +106,7 @@ class _MyWidgetState extends State<MyWidget> {
                         logger.d("'プルダウン押下　値変更: ${value}'");
                       });
                     },
+
                     //TODO:別リストをどこかで持ちたい→テーブル化→汎用テーブル
                     items: codeLanguagesItems
                         .map<DropdownMenuItem<String>>((String value) {
