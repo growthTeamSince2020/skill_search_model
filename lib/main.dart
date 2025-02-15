@@ -275,7 +275,7 @@ class _MyWidgetState extends State<MyWidget> {
     return query.snapshots();
   }
 
-  //サブコレクションを実装　code_languagesVal, //経験言語 String → ArrayList
+  //サブコレクションを実装　code_languagesVal, //経験言語 String → ArrayList test
   Future<void> addUser(int idVal, String first_nameVal, String last_nameVal,
       int ageVal, String nearest_station_line_nameVal, String nearest_station_nameVal,
       List<String> code_languagesVal, List<int> code_languages_yearsVal, int years_of_experienceVal) async {
