@@ -161,7 +161,7 @@ class _MyWidgetState extends State<MyWidget> {
                     onPressed: () {
                       setState(() {
                         for (int i = 4; i < 201; i++) {
-                          addUser(i, "太郎", "遠藤", 30, "西武新宿線", "所沢", "java", 4);
+                          addUser(i, "太郎", "遠藤", 30, "西武新宿線", "所沢", ['C', 'JAVA', 'C#'],[1, 5, 6], 4);
                         }
 
                         logger.d("テストデータインサート");
@@ -227,9 +227,23 @@ class _MyWidgetState extends State<MyWidget> {
                                                   'nearest_station_line_name'] +
                                               snapshot.data?.docs[index]
                                                   ['nearest_station_name'])),
-                                          DataCell(Text(
-                                              snapshot.data?.docs[index]
-                                                  ['code_languages'])),
+                                          // DataCell(Text(
+                                          //     snapshot.data?.docs[index]
+                                          //         ['code_languages'])),
+                                      DataCell(
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: (snapshot.data?.docs[index]['code_languages'] as List<dynamic>).map((language) => Text(language)).toList(),
+
+                                        ),
+                                      ),
+                                      //TODO:!rows.any((DataRow row) => row.cells.length != columns.length)　のエラー箇所
+                                      DataCell(
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: (snapshot.data?.docs[index]['code_languages'] as List<dynamic>).map((language) => Text(language.toString())).toList(),
+                                        ),
+                                      ),
                                           DataCell(Text(snapshot
                                                   .data!
                                                   .docs[index]
@@ -261,25 +275,25 @@ class _MyWidgetState extends State<MyWidget> {
     return query.snapshots();
   }
 
-  Future<void> addUser(
-      int idVal,
-      String first_nameVal,
-      String last_nameVal,
-      int ageVal,
-      String nearest_station_line_nameVal,
-      String nearest_station_nameVal,
-      // String coding_languagesVal,
-      String code_languagesVal,
-      int years_of_experienceVal) async {
-    engineer.add({
-      'id': idVal, //連番
-      'first_name': first_nameVal, //名前
-      'last_name': last_nameVal, //苗字
-      'age': ageVal, //年齢
-      'nearest_station_line_name': nearest_station_line_nameVal, //最寄沿線
-      'nearest_station_name': nearest_station_nameVal, //最寄駅
-      'code_languages': code_languagesVal, //経験言語
-      'years_of_experience': years_of_experienceVal //エンジニア経験年数
-    });
+  //サブコレクションを実装　code_languagesVal, //経験言語 String → ArrayList
+  Future<void> addUser(int idVal, String first_nameVal, String last_nameVal,
+      int ageVal, String nearest_station_line_nameVal, String nearest_station_nameVal,
+      List<String> code_languagesVal, List<int> code_languages_yearsVal, int years_of_experienceVal) async {
+    try {
+       DocumentReference newEngineer = await engineer.add({
+        'id': idVal, //連番
+        'first_name': first_nameVal, //名前
+        'last_name': last_nameVal, //苗字
+        'age': ageVal, //年齢
+        'nearest_station_line_name': nearest_station_line_nameVal, //最寄沿線
+        'nearest_station_name': nearest_station_nameVal, //最寄駅
+        'years_of_experience': years_of_experienceVal
+      });
+       await newEngineer.update({'code_languages': code_languagesVal}); //経験言語
+       await newEngineer.update({'code_languages_years': code_languages_yearsVal}); //経験言語年数
+
+    } catch (e) {
+      print('Error adding code_language or code_languages: $e');
+    }
   }
 }
