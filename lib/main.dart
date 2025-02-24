@@ -161,9 +161,15 @@ class _MyWidgetState extends State<MyWidget> {
                     onPressed: () {
                       setState(() {
                         for (int i = 4; i < 201; i++) {
-                          addUser(i, "太郎", "遠藤", 30, "西武新宿線", "所沢", ['C', 'JAVA', 'C#'],[1, 5, 6], 4);
+                          addUser(i, '太郎', '遠藤', 30, '西武新宿線', '所沢',
+                              ['PM', 'リーダー', '技術支援'],<int>[1, 5, 6],//チーム役割
+                              ['C', 'JAVA', 'C#'] ,<int>[1, 5, 6],//経験言語
+                              ['要件定義', '基本設計', '詳細設計', 'コ ーディング','単体テスト','結合テスト'] ,<int>[1, 5, 6, 5, 6],//工程　
+                              ['Oracle', 'postgresql', 'MongoDB'],<int>[1, 5, 6],//DB経
+                              ['Windows', 'macOS', 'Unix', 'Linux'],<int>[1, 5, 6, 5],//OS経験
+                              ['AWS', 'Azure', 'GoogleCloud'],<int>[1, 5, 6],
+                              ['Eclipse', 'VSCode', 'Git'],<int>[1, 5, 6]);//クラウド経験
                         }
-
                         logger.d("テストデータインサート");
                       });
                     },
@@ -209,8 +215,8 @@ class _MyWidgetState extends State<MyWidget> {
                                   DataColumn(label: Text('年齢')),
                                   DataColumn(label: Text('最寄駅')),
                                   // DataColumn(label: Text('使用言語 経験年数')),
-                                  DataColumn(label: Text('使用言語')),
-                                  DataColumn(label: Text('経験年数')),
+                                  DataColumn(label: Text('言語')),
+                                  DataColumn(label: Text('言語経験')),
                                 ],
                                 rows: List<DataRow>.generate(
                                     snapshot.data?.size as int,
@@ -227,9 +233,6 @@ class _MyWidgetState extends State<MyWidget> {
                                                   'nearest_station_line_name'] +
                                               snapshot.data?.docs[index]
                                                   ['nearest_station_name'])),
-                                          // DataCell(Text(
-                                          //     snapshot.data?.docs[index]
-                                          //         ['code_languages'])),
                                       DataCell(
                                         Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -241,15 +244,9 @@ class _MyWidgetState extends State<MyWidget> {
                                       DataCell(
                                         Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: (snapshot.data?.docs[index]['code_languages'] as List<dynamic>).map((language) => Text(language.toString())).toList(),
+                                          children: (snapshot.data?.docs[index]['code_languages_years'] as List<dynamic>).map((language) => Text(language.toString())).toList(),
                                         ),
                                       ),
-                                          DataCell(Text(snapshot
-                                                  .data!
-                                                  .docs[index]
-                                                      ['years_of_experience']
-                                                  .toString() +
-                                              "年")),
                                         ])),
                               ));
                         })),
@@ -271,29 +268,48 @@ class _MyWidgetState extends State<MyWidget> {
     if (ageDropdownSelectedValue != 0) {
       query = query.where("age", isLessThanOrEqualTo: ageDropdownSelectedValue);
     }
-
     return query.snapshots();
   }
 
-  //サブコレクションを実装　code_languagesVal, //経験言語 String → ArrayList test
-  Future<void> addUser(int idVal, String first_nameVal, String last_nameVal,
-      int ageVal, String nearest_station_line_nameVal, String nearest_station_nameVal,
-      List<String> code_languagesVal, List<int> code_languages_yearsVal, int years_of_experienceVal) async {
-    try {
-       DocumentReference newEngineer = await engineer.add({
-        'id': idVal, //連番
-        'first_name': first_nameVal, //名前
-        'last_name': last_nameVal, //苗字
-        'age': ageVal, //年齢
-        'nearest_station_line_name': nearest_station_line_nameVal, //最寄沿線
-        'nearest_station_name': nearest_station_nameVal, //最寄駅
-        'years_of_experience': years_of_experienceVal
-      });
-       await newEngineer.update({'code_languages': code_languagesVal}); //経験言語
-       await newEngineer.update({'code_languages_years': code_languages_yearsVal}); //経験言語年数
+//サブコレクションを実装　code_languagesVal, //経験言語 String → ArrayList test
+Future<void> addUser(int idVal, String first_nameVal, String last_nameVal,
+    int ageVal, String nearest_station_line_nameVal, String nearest_station_nameVal,
 
-    } catch (e) {
-      print('Error adding code_language or code_languages: $e');
-    }
+    //--追加中
+    List<String> team_roleVal,List<int> team_role_yearsVal, List<String> code_languagesVal,List<int> code_languages_yearsVal,
+    List<String> processVal,List<int> process_yearsVal, List<String> db_experienceVal,List<int> db_experience_yearsVal,
+    List<String> os_experienceVal, List<int> os_experience_yearsVal,
+    List<String> cloud_technologyVal,List<int> cloud_technology_yearsVal,
+    List<String> toolVal, List<int> tool_yearsVal
+
+    ) async {
+  try {
+    DocumentReference newEngineer = await engineer.add({
+      'id': idVal, //連番
+      'first_name': first_nameVal, //名前
+      'last_name': last_nameVal, //苗字
+      'age': ageVal, //年齢
+      'nearest_station_line_name': nearest_station_line_nameVal, //最寄沿線
+      'nearest_station_name': nearest_station_nameVal, //最寄駅
+
+    });
+    await newEngineer.update({'team_role':team_roleVal}); //チーム役割
+    await newEngineer.update({'team_role_years':team_role_yearsVal}); //チーム工程
+    await newEngineer.update({'process':processVal}); //工程
+    await newEngineer.update({'process_years':process_yearsVal}); //工程経験
+    await newEngineer.update({'code_languages': code_languagesVal}); //経験言語
+    await newEngineer.update({'code_languages_years': code_languages_yearsVal}); //経験言語年数
+    await newEngineer.update({'db_experience':db_experienceVal}); //DB経験
+    await newEngineer.update({'db_experience_years':db_experience_yearsVal}); //DB工程
+    await newEngineer.update({'os_experience':os_experienceVal}); //OS経験
+    await newEngineer.update({'os_experience_years':os_experience_yearsVal}); //OS工程
+    await newEngineer.update({'cloud_technology':cloud_technologyVal}); //クラウド技術
+    await newEngineer.update({'cloud_technology_years':cloud_technology_yearsVal}); //クラウド技術経験
+    await newEngineer.update({'tool':toolVal}); //ツール
+    await newEngineer.update({'tool_years':tool_yearsVal}); //ツール経験
+
+   } catch (e) {
+    print('Error adding code_language or code_languages: $e');
+   }
   }
 }
