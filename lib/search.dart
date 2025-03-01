@@ -11,6 +11,7 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   final CollectionReference engineer = FirebaseFirestore.instance.collection('engineer');
+  final CollectionReference utilData = FirebaseFirestore.instance.collection('utilData');
 
   final TextEditingController _controller = TextEditingController();
   final logger = Logger(); //ロガーの宣言
@@ -218,9 +219,14 @@ class _SearchPageState extends State<SearchPage> {
                                       ),
                                       //TODO:!rows.any((DataRow row) => row.cells.length != columns.length)　のエラー箇所
                                       DataCell(
+                                        // Column(
+                                        //   crossAxisAlignment: CrossAxisAlignment.start,
+                                        //   children: (snapshot.data?.docs[index]['code_languages_years'] as List<dynamic>).map((language) => Text(language.toString())).toList(),
+                                        // ),
                                         Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: (snapshot.data?.docs[index]['code_languages_years'] as List<dynamic>).map((language) => Text(language.toString())).toList(),
+                                          children:
+                                            getUtilDateListGetter((snapshot.data?.docs[index]['code_languages_years'] as List<dynamic>)).map((language) => Text(language.toString())).toList(),
                                         ),
                                       ),
                                     ])),
@@ -245,6 +251,30 @@ class _SearchPageState extends State<SearchPage> {
       query = query.where("age", isLessThanOrEqualTo: ageDropdownSelectedValue);
     }
     return query.snapshots();
+  }
+
+  /* UtilDateのリストから文字列取得してListにして返す
+   * @param int utilDataArrayNumber Listの番号
+   * @param String field　ドキュメントのフィールド名
+   * @return 選択肢文字列のList
+  */
+  List<String>? getUtilDateListGetter(List<dynamic> utilDataArrayNumberList,String field) {
+    List<String>? utilDataListForReturn;
+    for (var item in utilDataArrayNumberList) {
+      utilDataListForReturn?.add(getUtilDateGetter(item,field));
+    }
+    return utilDataListForReturn;
+  }
+
+  /* UtilDateのリストから文字列取得し返す
+   * @param int utilDataArrayNumber Listの番号
+   * @param String field　ドキュメントのフィールド名
+   * @return 選択肢文字列
+  */
+  String getUtilDateGetter(int utilDataArrayNumber,String field) {
+    Query query = utilData;
+    List<String> fieldList = query.where(field) as List<String>;
+    return fieldList[utilDataArrayNumber];
   }
 
 //サブコレクションを実装　code_languagesVal, //経験言語 String → ArrayList test
