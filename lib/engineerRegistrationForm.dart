@@ -15,18 +15,15 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
   final _codeLanguagesController = TextEditingController();
   final _nearestStationController = TextEditingController();
 
-  // 工程チェックボックスの状態を管理する変数（2次元配列に変更）
-  final List<String> _processes = [
-    '要件定義',
-    '基本設計',
-    '詳細設計',
-    'コーディング',
-    '単体',
-    '結合',
-    '保守',
-  ];
-  final List<List<bool>> _processChecked =
-  List.generate(7, (index) => List.generate(4, (index) => false)); // 4つ目の要素は工程自体のチェック状態
+  final Map<String, List<bool>> _processChecked = {
+    '要件定義': [false, false, false, false],
+    '基本設計': [false, false, false, false],
+    '詳細設計': [false, false, false, false],
+    'コーディング': [false, false, false, false],
+    '単体': [false, false, false, false],
+    '結合': [false, false, false, false],
+    '保守': [false, false, false, false],
+  };
 
   @override
   void dispose() {
@@ -41,16 +38,16 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
   Future<void> _registerEngineer() async {
     if (_formKey.currentState!.validate()) {
       try {
-        // チェックされた工程のリストを作成
-        List<String> selectedProcesses = [];
-        for (int i = 0; i < _processes.length; i++) {
-          for (int j = 0; j < 3; j++) {
-            if (_processChecked[i][j]) {
-              selectedProcesses.add(_processes[i]);
-              break; // 1つの工程で1つでもチェックされていれば追加
-            }
+        Map<String, List<String>> selectedProcesses = {};
+        _processChecked.forEach((process, levels) {
+          List<String> selectedLevels = [];
+          if (levels[0]) selectedLevels.add('未経験');
+          if (levels[1]) selectedLevels.add('経験浅い');
+          if (levels[2]) selectedLevels.add('経験豊富');
+          if (selectedLevels.isNotEmpty) {
+            selectedProcesses[process] = selectedLevels;
           }
-        }
+        });
 
         await FirebaseFirestore.instance.collection('engineers').add({
           'firstName': _firstNameController.text,
@@ -58,12 +55,12 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
           'age': int.parse(_ageController.text),
           'codeLanguages': _codeLanguagesController.text.split(','),
           'nearestStation': _nearestStationController.text,
-          'processes': selectedProcesses, // チェックされた工程のリストを送信
+          'processes': selectedProcesses,
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('技術者登録が完了しました')),
         );
-        Navigator.pop(context); // 登録完了後に前の画面に戻る
+        Navigator.pop(context);
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('登録に失敗しました: $e')),
@@ -85,122 +82,107 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
               TextFormField(
                 controller: _firstNameController,
                 decoration: InputDecoration(labelText: '名前'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return '名前を入力してください';
-                  }
-                  return null;
-                },
+                validator: (value) => value == null || value.isEmpty ? '名前を入力してください' : null,
               ),
               TextFormField(
                 controller: _lastNameController,
                 decoration: InputDecoration(labelText: '苗字'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return '苗字を入力してください';
-                  }
-                  return null;
-                },
+                validator: (value) => value == null || value.isEmpty ? '苗字を入力してください' : null,
               ),
               TextFormField(
                 controller: _ageController,
                 decoration: InputDecoration(labelText: '年齢'),
                 keyboardType: TextInputType.number,
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return '年齢を入力してください';
-                  }
-                  if (int.tryParse(value) == null) {
-                    return '有効な年齢を入力してください';
-                  }
-                  return null;
+                  if (value == null || value.isEmpty) return '年齢を入力してください';
+                  return int.tryParse(value) == null ? '有効な年齢を入力してください' : null;
                 },
               ),
               TextFormField(
                 controller: _codeLanguagesController,
                 decoration: InputDecoration(labelText: '経験言語 (カンマ区切り)'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return '経験言語を入力してください';
-                  }
-                  return null;
-                },
+                validator: (value) => value == null || value.isEmpty ? '経験言語を入力してください' : null,
               ),
               TextFormField(
                 controller: _nearestStationController,
                 decoration: InputDecoration(labelText: '最寄駅'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return '最寄駅を入力してください';
-                  }
-                  return null;
-                },
+                validator: (value) => value == null || value.isEmpty ? '最寄駅を入力してください' : null,
               ),
-              // 工程チェックボックス（ExpansionTileをネスト）
               ExpansionTile(
                 title: Text('▼工程'),
-                children: _processes.map((process) {
-                  int processIndex = _processes.indexOf(process);
-                  return StatefulBuilder( // チェックボックスの状態を管理するためにStatefulBuilderを使用
-                    builder: (context, setState) {
-                      return ExpansionTile(
-                        title: Row(
-                          children: [
-                            Checkbox(
-                              value: _processChecked[processIndex][3], // 工程自体のチェック状態
-                              onChanged: (value) {
-                                setState(() {
-                                  _processChecked[processIndex][3] = value!;
-                                });
-                              },
-                            ),
-                            Text(process),
-                          ],
+                children: _processChecked.keys.map((process) {
+                  return Padding(
+                    padding: const EdgeInsets.only(left: 16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CheckboxListTile(
+                          title: Text(process),
+                          value: _processChecked[process]![3],
+                          onChanged: (value) {
+                            setState(() {
+                              _processChecked[process]![3] = value!;
+                            });
+                          },
+                          controlAffinity: ListTileControlAffinity.leading,
+                          contentPadding: EdgeInsets.zero,
                         ),
-                        children: _processChecked[processIndex][3] // 工程がチェックされている場合のみ表示
-                            ? [
-                          Wrap(
-                            spacing: 8.0,
-                            children: [
-                              CheckboxListTile(
-                                title: Text('未経験'),
-                                value: _processChecked[processIndex][0],
-                                onChanged: (value) {
-                                  setState(() {
-                                    _processChecked[processIndex][0] = value!;
-                                  });
-                                },
-                                controlAffinity: ListTileControlAffinity.leading,
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                              CheckboxListTile(
-                                title: Text('経験があるが未熟'),
-                                value: _processChecked[processIndex][1],
-                                onChanged: (value) {
-                                  setState(() {
-                                    _processChecked[processIndex][1] = value!;
-                                  });
-                                },
-                                controlAffinity: ListTileControlAffinity.leading,
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                              CheckboxListTile(
-                                title: Text('経験豊富'),
-                                value: _processChecked[processIndex][2],
-                                onChanged: (value) {
-                                  setState(() {
-                                    _processChecked[processIndex][2] = value!;
-                                  });
-                                },
-                                controlAffinity: ListTileControlAffinity.leading,
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                            ],
+                        if (_processChecked[process]![3])
+                          Padding(
+                            padding: const EdgeInsets.only(left: 16.0),
+                            child: Wrap(
+                              spacing: 8.0,
+                              children: [
+                                CheckboxListTile(
+                                  title: Text('未経験'),
+                                  value: _processChecked[process]![0],
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _processChecked[process]![0] = value!;
+                                      if (value) {
+                                        _processChecked[process]![1] = false;
+                                        _processChecked[process]![2] = false;
+                                      }
+                                    });
+                                  },
+                                  controlAffinity: ListTileControlAffinity.trailing,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                                CheckboxListTile(
+                                  title: Text('経験があるが未熟'),
+                                  value: _processChecked[process]![1],
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _processChecked[process]![1] = value!;
+                                      if (value) {
+                                        _processChecked[process]![0] = false;
+                                        _processChecked[process]![2] = false;
+                                      }
+                                    });
+                                  },
+                                  controlAffinity: ListTileControlAffinity.trailing,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                                CheckboxListTile(
+                                  title: Text('経験豊富'),
+                                  value: _processChecked[process]![2],
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _processChecked[process]![2] = value!;
+                                      if (value) {
+                                        _processChecked[process]![0] = false;
+                                        _processChecked[process]![1] = false;
+                                      }
+                                    });
+                                  },
+                                  controlAffinity: ListTileControlAffinity.trailing,
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                              ],
+                            ),
                           ),
-                        ]
-                            : [],
-                      );
-                    },
+                      ],
+                    ),
                   );
                 }).toList(),
               ),
