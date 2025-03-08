@@ -1,8 +1,7 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
-import 'package:skill_search_model/firebase_options.dart';
 
 class SearchPage extends StatefulWidget {
   @override
@@ -12,6 +11,7 @@ class SearchPage extends StatefulWidget {
 class _SearchPageState extends State<SearchPage> {
   final CollectionReference engineer = FirebaseFirestore.instance.collection('engineer');
   final CollectionReference utilData = FirebaseFirestore.instance.collection('utilData');
+// FireStoreの'arrays'コレクションのすべてのドキュメントを取得するプロバイダー。初回に全件分、あとは変更があるたびStreamに通知される。
 
   final TextEditingController _controller = TextEditingController();
   final logger = Logger(); //ロガーの宣言
@@ -30,21 +30,7 @@ class _SearchPageState extends State<SearchPage> {
   }
   @override
   void initState() {
-    super.initState();
-    // Firestoreからデータを取得してcodeLanguagesItemsリストに格納
-    FirebaseFirestore.instance
-        .collection('utilData')
-        .where("type", isEqualTo: utilDataSelectedType)
-        .orderBy("sortNo")
-        .get()
-        .then((QuerySnapshot querySnapshot) {
-      List<dynamic> allData = querySnapshot.docs.map((doc) => doc.data()).toList();
-      setState(() {
-        // 例: ドキュメントの"name"フィールドをプルダウンのアイテムとする
-        codeLanguagesItems = allData.map((data) => data['val'] as String).toList();
-        logger.d("チェック: ${codeLanguagesItems}'");
-      });
-    });
+    _fetchData(); // 別メソッドで非同期処理を実行
   }
 
   @override
@@ -139,13 +125,20 @@ class _SearchPageState extends State<SearchPage> {
                       setState(() {
                         for (int i = 4; i < 201; i++) {
                           addUser(i, '太郎', '遠藤', 30, '西武新宿線', '所沢',
-                              ['PM', 'リーダー', '技術支援'],<int>[1, 5, 6],//チーム役割
-                              ['C', 'JAVA', 'C#'] ,<int>[1, 5, 6],//経験言語
-                              ['要件定義', '基本設計', '詳細設計', 'コ ーディング','単体テスト','結合テスト'] ,<int>[1, 5, 6, 5, 6],//工程　
-                              ['Oracle', 'postgresql', 'MongoDB'],<int>[1, 5, 6],//DB経
-                              ['Windows', 'macOS', 'Unix', 'Linux'],<int>[1, 5, 6, 5],//OS経験
-                              ['AWS', 'Azure', 'GoogleCloud'],<int>[1, 5, 6],
-                              ['Eclipse', 'VSCode', 'Git'],<int>[1, 5, 6]);//クラウド経験
+                            // ['PM', 'リーダー', '技術支援'],<int>[1, 5, 6],//チーム役割
+                            <int>[0, 1, 2, 3, 4],<int>[0, 1, 2, 3],//チーム役割
+                            // ['C', 'JAVA', 'C#'] ,<int>[1, 5, 6],//経験言語
+                            <int>[0, 1, 2] ,<int>[0, 1, 2],//経験言語
+                            // ['要件定義', '基本設計', '詳細設計', 'コ ーディング','単体テスト','結合テスト'] ,<int>[1, 5, 6, 5, 6],//工程　
+                            <int>[0, 1, 2, 3, 4] ,<int>[0, 1, 2, 3, 3],//工程　
+                            // ['Oracle', 'postgresql', 'MongoDB'],<int>[1, 5, 6],//DB経験
+                            <int>[0, 1, 2] ,<int>[0, 1, 2],//DB経
+                            // ['Windows', 'macOS', 'Unix', 'Linux'],<int>[1, 5, 6, 5],//OS経験
+                            <int>[0, 1, 2, 3, 4] ,<int>[0, 1, 2, 3, 1],///OS経験
+                            // ['AWS', 'Azure', 'GoogleCloud'],<int>[1, 5, 6],
+                            <int>[0, 1, 2, 3] ,<int>[0, 1, 2, 3],
+                            // ['Eclipse', 'VSCode', 'Git'],<int>[1, 5, 6]);//クラウド経験
+                            <int>[0, 1, 2, 3, 4] ,<int>[0, 1, 2, 3, 3],);//クラウド経験
                         }
                         logger.d("テストデータインサート");
                       });
@@ -193,7 +186,7 @@ class _SearchPageState extends State<SearchPage> {
                                   DataColumn(label: Text('最寄駅')),
                                   // DataColumn(label: Text('使用言語 経験年数')),
                                   DataColumn(label: Text('言語')),
-                                  DataColumn(label: Text('言語経験')),
+                                  // DataColumn(label: Text('言語経験')),
                                 ],
                                 rows: List<DataRow>.generate(
                                     snapshot.data?.size as int,
@@ -213,22 +206,20 @@ class _SearchPageState extends State<SearchPage> {
                                       DataCell(
                                         Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: (snapshot.data?.docs[index]['code_languages'] as List<dynamic>).map((language) => Text(language)).toList(),
-
+                                          children: (snapshot.data?.docs[index]['code_languages'] as List<dynamic>).map((language) => Text(language.toString())).toList(),
                                         ),
                                       ),
-                                      //TODO:!rows.any((DataRow row) => row.cells.length != columns.length)　のエラー箇所
-                                      DataCell(
-                                        // Column(
-                                        //   crossAxisAlignment: CrossAxisAlignment.start,
-                                        //   children: (snapshot.data?.docs[index]['code_languages_years'] as List<dynamic>).map((language) => Text(language.toString())).toList(),
-                                        // ),
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children:
-                                            getUtilDateListGetter((snapshot.data?.docs[index]['code_languages_years'] as List<dynamic>)).map((language) => Text(language.toString())).toList(),
-                                        ),
-                                      ),
+                                      // //TODO:!rows.any((DataRow row) => row.cells.length != columns.length)　のエラー箇所
+                                      // DataCell(
+                                      //   // Column(
+                                      //   //   crossAxisAlignment: CrossAxisAlignment.start,
+                                      //   //   children: (snapshot.data?.docs[index]['code_languages_years'] as List<dynamic>).map((language) => Text(language.toString())).toList(),
+                                      //   // ),
+                                      //   Column(
+                                      //     crossAxisAlignment: CrossAxisAlignment.start,
+                                      //     children: (snapshot.data?.docs[index]['code_languages'] as List<dynamic>).map((language) => Text(language as String)).toList(),
+                                      //   ),
+                                      // ),
                                     ])),
                               ));
                         })),
@@ -251,6 +242,38 @@ class _SearchPageState extends State<SearchPage> {
       query = query.where("age", isLessThanOrEqualTo: ageDropdownSelectedValue);
     }
     return query.snapshots();
+  }
+  //工事中
+  Future<void> _fetchData() async {
+    List<String> result = await getStringListFromFirestore("utilData", "code_languages_item", "code_languages");
+    setState(() {
+      codeLanguagesItems = result;
+    });
+  }
+  //工事中
+  Future<List<String>> getStringListFromFirestore(String collectionName, String documentId, String field) async {
+    final docRef = FirebaseFirestore.instance.collection(collectionName).doc(documentId);
+
+    try {
+      final doc = await docRef.get();
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>?;
+
+        if (data != null) {
+          // 'code_languages'フィールドの値を取得
+          List<dynamic> codeLanguagesDynamic = data[field];
+          // dynamic型のリストをString型のリストに変換
+          List<String> codeLanguagesString = codeLanguagesDynamic.map((item) => item.toString()).toList();
+          codeLanguagesString.insert(0, "");
+          return codeLanguagesString;
+        }
+      } else {
+        print("Document does not exist");
+      }
+    } catch (e) {
+      print("Error getting document: $e");
+    }
+    return []; // エラーまたはドキュメントが存在しない場合は空のリストを返す
   }
 
   /* UtilDateのリストから文字列取得してListにして返す
@@ -282,11 +305,11 @@ class _SearchPageState extends State<SearchPage> {
       int ageVal, String nearest_station_line_nameVal, String nearest_station_nameVal,
 
       //--追加中
-      List<String> team_roleVal,List<int> team_role_yearsVal, List<String> code_languagesVal,List<int> code_languages_yearsVal,
-      List<String> processVal,List<int> process_yearsVal, List<String> db_experienceVal,List<int> db_experience_yearsVal,
-      List<String> os_experienceVal, List<int> os_experience_yearsVal,
-      List<String> cloud_technologyVal,List<int> cloud_technology_yearsVal,
-      List<String> toolVal, List<int> tool_yearsVal
+      List<int> team_roleVal,List<int> team_role_yearsVal, List<int> code_languagesVal,List<int> code_languages_yearsVal,
+      List<int> processVal,List<int> process_yearsVal, List<int> db_experienceVal,List<int> db_experience_yearsVal,
+      List<int> os_experienceVal, List<int> os_experience_yearsVal,
+      List<int> cloud_technologyVal,List<int> cloud_technology_yearsVal,
+      List<int> toolVal, List<int> tool_yearsVal
 
       ) async {
     try {
@@ -318,4 +341,5 @@ class _SearchPageState extends State<SearchPage> {
       print('Error adding code_language or code_languages: $e');
     }
   }
+
 }
