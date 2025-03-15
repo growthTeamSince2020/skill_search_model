@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:js_util';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
+import 'package:skill_search_model/constData.dart';
 
 class SearchPage extends StatefulWidget {
   @override
@@ -11,17 +13,24 @@ class SearchPage extends StatefulWidget {
 class _SearchPageState extends State<SearchPage> {
   final CollectionReference engineer = FirebaseFirestore.instance.collection('engineer');
   final CollectionReference utilData = FirebaseFirestore.instance.collection('utilData');
-// FireStoreの'arrays'コレクションのすべてのドキュメントを取得するプロバイダー。初回に全件分、あとは変更があるたびStreamに通知される。
-
+  // FireStoreの'arrays'コレクションのすべてのドキュメントを取得するプロバイダー。初回に全件分、あとは変更があるたびStreamに通知される。
   final TextEditingController _controller = TextEditingController();
   final logger = Logger(); //ロガーの宣言
-  final selectedIndex = <int>{};
-  final String utilDataSelectedType = "code_languages";
-  List<String> codeLanguagesItems = [];
-  String newKeyWord = "";
-  String textdata = "";
-  String codeLanguagesDropdownSelectedValue = "";
-  int ageDropdownSelectedValue = 0;
+  /* 検索条件用　*/
+  String newKeyWord = "";//キーワードテキスト入力
+  String textdata = "";//キーワードテキスト入力保持
+  String codeLanguagesDropdownSelectedValue = "";//言語選択条件値保持
+  List<String> codeLanguagesSelectItems = [];//言語選択条件リスト
+  int ageDropdownSelectedValue = 0;//年齢選択条件値保持
+
+  /* 検索一覧用　*/
+  List<String> processItem = [];//工程取得リスト
+  List<String> teamRoleItem = [];//チーム役割取得リスト
+  List<String> codeLanguagesItems = [];//経験言語取得リスト
+  List<String> dbExperienceItem = [];//DB取得リスト
+  List<String> osExperienceItem = [];//OS取得リスト
+  List<String> cloudTechnologyItems = [];//クラウド取得リスト
+  List<String> toolItem = [];//ツール取得リスト
 
   @override
   void dispose() {
@@ -71,7 +80,7 @@ class _SearchPageState extends State<SearchPage> {
                     },
 
                     //TODO:別リストをどこかで持ちたい→テーブル化→汎用テーブル
-                    items: codeLanguagesItems
+                    items: codeLanguagesSelectItems
                         .map<DropdownMenuItem<String>>((String value) {
                       return DropdownMenuItem<String>(
                         value: value,
@@ -85,10 +94,10 @@ class _SearchPageState extends State<SearchPage> {
                     value: ageDropdownSelectedValue,
                     //TODO:別リストをどこかで持ちたい→テーブル化→汎用テーブル　
                     items: [
-                      DropdownMenuItem(value: 0,child: Text('')),
-                      DropdownMenuItem(value: 30,child: Text('30歳以下')),
-                      DropdownMenuItem(value: 40,child: Text('40歳以下')),
-                      DropdownMenuItem(value: 50,child: Text('50歳以下')),
+                      DropdownMenuItem(value: 0,child: Text(constData.searchAgeSelectStringDefault)),
+                      DropdownMenuItem(value: 30,child: Text(constData.searchAgeSelectStringUnder30)),
+                      DropdownMenuItem(value: 40,child: Text(constData.searchAgeSelectStringUnder40)),
+                      DropdownMenuItem(value: 50,child: Text(constData.searchAgeSelectStringUnder50)),
                     ],
                     onChanged: (int? ageValue) {
                       // selectedValue = value!;
@@ -134,11 +143,11 @@ class _SearchPageState extends State<SearchPage> {
                             // ['Oracle', 'postgresql', 'MongoDB'],<int>[1, 5, 6],//DB経験
                             <int>[0, 1, 2] ,<int>[0, 1, 2],//DB経
                             // ['Windows', 'macOS', 'Unix', 'Linux'],<int>[1, 5, 6, 5],//OS経験
-                            <int>[0, 1, 2, 3, 4] ,<int>[0, 1, 2, 3, 1],///OS経験
-                            // ['AWS', 'Azure', 'GoogleCloud'],<int>[1, 5, 6],
-                            <int>[0, 1, 2, 3] ,<int>[0, 1, 2, 3],
-                            // ['Eclipse', 'VSCode', 'Git'],<int>[1, 5, 6]);//クラウド経験
-                            <int>[0, 1, 2, 3, 4] ,<int>[0, 1, 2, 3, 3],);//クラウド経験
+                            <int>[0, 1, 2, 3, 4] ,<int>[0, 1, 2, 3, 1],//OS経験
+                            // ['AWS', 'Azure', 'GoogleCloud'],<int>[1, 5, 6],//クラウド経験
+                            <int>[0, 1, 2, 3] ,<int>[0, 1, 2, 3],//クラウド経験
+                            // ['Eclipse', 'VSCode', 'Git'],<int>[1, 5, 6]);//ツール経験
+                            <int>[0, 1, 2, 3, 4] ,<int>[0, 1, 2, 3, 3],);//ツール経験
                         }
                         logger.d("テストデータインサート");
                       });
@@ -206,20 +215,10 @@ class _SearchPageState extends State<SearchPage> {
                                       DataCell(
                                         Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: (snapshot.data?.docs[index]['code_languages'] as List<dynamic>).map((language) => Text(language.toString())).toList(),
+                                          children:
+                                          (getUtilDateListGetter(snapshot.data?.docs[index]['code_languages'], codeLanguagesItems)  as List<String>).map((language) => Text(language.toString())).toList(),
                                         ),
                                       ),
-                                      // //TODO:!rows.any((DataRow row) => row.cells.length != columns.length)　のエラー箇所
-                                      // DataCell(
-                                      //   // Column(
-                                      //   //   crossAxisAlignment: CrossAxisAlignment.start,
-                                      //   //   children: (snapshot.data?.docs[index]['code_languages_years'] as List<dynamic>).map((language) => Text(language.toString())).toList(),
-                                      //   // ),
-                                      //   Column(
-                                      //     crossAxisAlignment: CrossAxisAlignment.start,
-                                      //     children: (snapshot.data?.docs[index]['code_languages'] as List<dynamic>).map((language) => Text(language as String)).toList(),
-                                      //   ),
-                                      // ),
                                     ])),
                               ));
                         })),
@@ -243,15 +242,35 @@ class _SearchPageState extends State<SearchPage> {
     }
     return query.snapshots();
   }
-  //工事中
+  /* UtilDateのリストから文字列取得して各Listにして返す
+   * @param なし
+   * @return なし
+  */
   Future<void> _fetchData() async {
-    List<String> result = await getStringListFromFirestore("utilData", "code_languages_item", "code_languages");
+    //プルダウン
+    List<String> codeLanguagesSelectItemsResult = await getStringListFromFirestore("utilData", "code_languages_item", "code_languages", true);//言語選択プルダウン
+    //検索用
+    List<String> codeLanguagesResult = await getStringListFromFirestore("utilData", "code_languages_item", "code_languages", false);//言語リスト
+    List<String> processItemResult = await getStringListFromFirestore("utilData", "code_languages_item", "code_languages", false);//工程取得リスト
+    List<String> teamRoleItemResult = await getStringListFromFirestore("utilData", "code_languages_item", "code_languages", false);//チーム役割取得リスト
+    List<String> codeLanguagesItemResults = await getStringListFromFirestore("utilData", "code_languages_item", "code_languages", false);//経験言語取得リスト
+    List<String> dbExperienceItemResult = await getStringListFromFirestore("utilData", "code_languages_item", "code_languages", false);//DB取得リスト
+    List<String> osExperienceItemResult = await getStringListFromFirestore("utilData", "code_languages_item", "code_languages", false);//OS取得リスト
+    List<String> cloudTechnologyItemResults = await getStringListFromFirestore("utilData", "code_languages_item", "code_languages", false);//クラウド取得リスト
+    List<String> toolItemResult = await getStringListFromFirestore("utilData", "code_languages_item", "code_languages", false);//ツール取得リスト
     setState(() {
-      codeLanguagesItems = result;
+      codeLanguagesSelectItems = codeLanguagesSelectItemsResult;//言語選択プルダウン
+      codeLanguagesItems = codeLanguagesResult;//言語リスト
+
+
     });
   }
-  //工事中
-  Future<List<String>> getStringListFromFirestore(String collectionName, String documentId, String field) async {
+  /* UtilDateのリストから文字列取得してListにして返す
+   * @param List<dynamic> numberList 番号のリスト
+   * @param List<String> utilDataArray utilDataのリスト
+   * @return 選択肢文字列のList
+  */
+  Future<List<String>> getStringListFromFirestore(String collectionName, String documentId, String field, bool isSelector) async {
     final docRef = FirebaseFirestore.instance.collection(collectionName).doc(documentId);
 
     try {
@@ -264,7 +283,9 @@ class _SearchPageState extends State<SearchPage> {
           List<dynamic> codeLanguagesDynamic = data[field];
           // dynamic型のリストをString型のリストに変換
           List<String> codeLanguagesString = codeLanguagesDynamic.map((item) => item.toString()).toList();
-          codeLanguagesString.insert(0, "");
+          if(isSelector) {
+            codeLanguagesString.insert(0, "");
+          }
           return codeLanguagesString;
         }
       } else {
@@ -277,34 +298,23 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   /* UtilDateのリストから文字列取得してListにして返す
-   * @param int utilDataArrayNumber Listの番号
-   * @param String field　ドキュメントのフィールド名
+   * @param List<dynamic> numberList 番号のリスト
+   * @param List<String> utilDataArray utilDataのリスト
    * @return 選択肢文字列のList
   */
-  List<String>? getUtilDateListGetter(List<dynamic> utilDataArrayNumberList,String field) {
-    List<String>? utilDataListForReturn;
-    for (var item in utilDataArrayNumberList) {
-      utilDataListForReturn?.add(getUtilDateGetter(item,field));
+  List<String>? getUtilDateListGetter(List<dynamic> numberList, List<String> utilDataArray) {
+    List<String> utilDataListForReturn = [];
+
+    for (var item in numberList) {
+      print(utilDataArray[item]);
+      utilDataListForReturn.add(utilDataArray[item]);
     }
     return utilDataListForReturn;
-  }
-
-  /* UtilDateのリストから文字列取得し返す
-   * @param int utilDataArrayNumber Listの番号
-   * @param String field　ドキュメントのフィールド名
-   * @return 選択肢文字列
-  */
-  String getUtilDateGetter(int utilDataArrayNumber,String field) {
-    Query query = utilData;
-    List<String> fieldList = query.where(field) as List<String>;
-    return fieldList[utilDataArrayNumber];
   }
 
 //サブコレクションを実装　code_languagesVal, //経験言語 String → ArrayList test
   Future<void> addUser(int idVal, String first_nameVal, String last_nameVal,
       int ageVal, String nearest_station_line_nameVal, String nearest_station_nameVal,
-
-      //--追加中
       List<int> team_roleVal,List<int> team_role_yearsVal, List<int> code_languagesVal,List<int> code_languages_yearsVal,
       List<int> processVal,List<int> process_yearsVal, List<int> db_experienceVal,List<int> db_experience_yearsVal,
       List<int> os_experienceVal, List<int> os_experience_yearsVal,
@@ -320,7 +330,6 @@ class _SearchPageState extends State<SearchPage> {
         'age': ageVal, //年齢
         'nearest_station_line_name': nearest_station_line_nameVal, //最寄沿線
         'nearest_station_name': nearest_station_nameVal, //最寄駅
-
       });
       await newEngineer.update({'team_role':team_roleVal}); //チーム役割
       await newEngineer.update({'team_role_years':team_role_yearsVal}); //チーム工程
