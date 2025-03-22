@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 import 'dart:js_util';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -16,21 +17,26 @@ class _SearchPageState extends State<SearchPage> {
   // FireStoreの'arrays'コレクションのすべてのドキュメントを取得するプロバイダー。初回に全件分、あとは変更があるたびStreamに通知される。
   final TextEditingController _controller = TextEditingController();
   final logger = Logger(); //ロガーの宣言
+
   /* 検索条件用　*/
   String newKeyWord = "";//キーワードテキスト入力
   String textdata = "";//キーワードテキスト入力保持
   String codeLanguagesDropdownSelectedValue = "";//言語選択条件値保持
-  List<String> codeLanguagesSelectItems = [];//言語選択条件リスト
+  List<String> codeLanguagesSelectItem = [];//言語選択条件リスト
   int ageDropdownSelectedValue = 0;//年齢選択条件値保持
 
   /* 検索一覧用　*/
   List<String> processItem = [];//工程取得リスト
   List<String> teamRoleItem = [];//チーム役割取得リスト
-  List<String> codeLanguagesItems = [];//経験言語取得リスト
+  List<String> codeLanguagesItem = [];//経験言語取得リスト
   List<String> dbExperienceItem = [];//DB取得リスト
   List<String> osExperienceItem = [];//OS取得リスト
-  List<String> cloudTechnologyItems = [];//クラウド取得リスト
+  List<String> cloudTechnologyItem = [];//クラウド取得リスト
   List<String> toolItem = [];//ツール取得リスト
+  List<String> experienceCategoryItem = [];//経験程度リスト
+  List<String> yearsCategoryItem = [];//経験年リスト
+
+
 
   @override
   void dispose() {
@@ -80,7 +86,7 @@ class _SearchPageState extends State<SearchPage> {
                     },
 
                     //TODO:別リストをどこかで持ちたい→テーブル化→汎用テーブル
-                    items: codeLanguagesSelectItems
+                    items: codeLanguagesSelectItem
                         .map<DropdownMenuItem<String>>((String value) {
                       return DropdownMenuItem<String>(
                         value: value,
@@ -186,15 +192,27 @@ class _SearchPageState extends State<SearchPage> {
                           }
 
                           return SingleChildScrollView(
-                              scrollDirection: Axis.vertical, //スクロールの方向、垂直
+                              scrollDirection: Axis.vertical,//スクロールの方向、水平
 
                               child: DataTable(
+                                dataRowHeight: 100.0,
                                 columns: const [
                                   DataColumn(label: Text('氏名')),
                                   DataColumn(label: Text('年齢')),
                                   DataColumn(label: Text('最寄駅')),
                                   // DataColumn(label: Text('使用言語 経験年数')),
+                                  DataColumn(label: Text('工程')),
+                                  DataColumn(label: Text('工程経験')),
+                                  DataColumn(label: Text('チーム')),
+                                  DataColumn(label: Text('チーム経験')),
                                   DataColumn(label: Text('言語')),
+                                  DataColumn(label: Text('言語経験')),
+                                  DataColumn(label: Text('DB')),
+                                  DataColumn(label: Text('DB経験')),
+                                  DataColumn(label: Text('OS')),
+                                  DataColumn(label: Text('OS経験')),
+                                  DataColumn(label: Text('クラウド')),
+                                  DataColumn(label: Text('クラウド経験')),
                                   // DataColumn(label: Text('言語経験')),
                                 ],
                                 rows: List<DataRow>.generate(
@@ -212,13 +230,139 @@ class _SearchPageState extends State<SearchPage> {
                                       'nearest_station_line_name'] +
                                           snapshot.data?.docs[index]
                                           ['nearest_station_name'])),
-                                      DataCell(
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children:
-                                          (getUtilDateListGetter(snapshot.data?.docs[index]['code_languages'], codeLanguagesItems)  as List<String>).map((language) => Text(language.toString())).toList(),
-                                        ),
-                                      ),
+                                      // DataCell(
+                                      //   Column(
+                                      //     crossAxisAlignment: CrossAxisAlignment.start,
+                                      //     children:
+                                      //     (getUtilDateListGetter(snapshot.data?.docs[index]['code_languages'], codeLanguagesItem)  as List<String>).map((language) => Text(language.toString())).toList(),
+                                      //   ),
+                                      // ),
+                                          //工程
+                                          DataCell(
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: (getUtilDateListGetter(snapshot.data?.docs[index]['process'], processItem) as List<String>)
+                                                  .map((language) => Text(language.toString(), style: TextStyle(fontSize: constData.rowItemfontsize))) // フォントサイズを小さくする
+                                                  .toList(),
+                                            ),
+                                          ),
+                                          DataCell(
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children:
+                                              (getUtilDateListGetter(snapshot.data?.docs[index]['process_experience'], experienceCategoryItem)  as List<String>)
+                                              .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
+                                              .toList(),
+                                            ),
+                                          ),
+                                          //チーム
+                                          DataCell(
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: (getUtilDateListGetter(snapshot.data?.docs[index]['team_role'], teamRoleItem) as List<String>)
+                                                  .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize))) // フォントサイズを小さくする
+                                                  .toList(),
+                                            ),
+                                          ),
+                                          DataCell(
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children:
+                                              (getUtilDateListGetter(snapshot.data?.docs[index]['team_role_years'], yearsCategoryItem)  as List<String>)
+                                                  .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
+                                                  .toList(),
+                                            ),
+                                          ),
+                                          //プログラミング言語
+                                          DataCell(
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: (getUtilDateListGetter(snapshot.data?.docs[index]['code_languages'], codeLanguagesItem) as List<String>)
+                                                  .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize))) // フォントサイズを小さくする
+                                                  .toList(),
+                                            ),
+                                          ),
+                                          DataCell(
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children:
+                                              (getUtilDateListGetter(snapshot.data?.docs[index]['code_languages_years'], yearsCategoryItem)  as List<String>)
+                                                  .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
+                                                  .toList(),
+                                            ),
+                                          ),
+                                          //DB
+                                          DataCell(
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children:
+                                              (getUtilDateListGetter(snapshot.data?.docs[index]['db_experience'], dbExperienceItem)  as List<String>)
+                                                  .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
+                                                  .toList(),
+                                            ),
+                                          ),
+                                          DataCell(
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children:
+                                              (getUtilDateListGetter(snapshot.data?.docs[index]['db_experience_years'], yearsCategoryItem)  as List<String>)
+                                                  .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
+                                                  .toList(),
+                                            ),
+                                          ),
+                                          //OS
+                                          DataCell(
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children:
+                                              (getUtilDateListGetter(snapshot.data?.docs[index]['os_experience'], osExperienceItem)  as List<String>)
+                                                  .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
+                                                  .toList(),
+                                            ),
+                                          ),
+                                          DataCell(
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children:
+                                              (getUtilDateListGetter(snapshot.data?.docs[index]['os_experience_years'], yearsCategoryItem)  as List<String>)
+                                                  .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
+                                                  .toList(),
+                                            ),
+                                          ),
+
+                                          DataCell(
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children:
+                                              (getUtilDateListGetter(snapshot.data?.docs[index]['cloud_technology'], cloudTechnologyItem)  as List<String>)
+                                                  .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
+                                                  .toList(),
+                                            ),
+                                          ),
+                                          DataCell(
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children:
+                                              (getUtilDateListGetter(snapshot.data?.docs[index]['cloud_technology_years'], yearsCategoryItem)  as List<String>)
+                                                  .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
+                                                  .toList(),
+                                            ),
+                                          ),
+                                          // DataCell(
+                                          //   Column(
+                                          //     crossAxisAlignment: CrossAxisAlignment.start,
+                                          //     children:
+                                          //     (getUtilDateListGetter(snapshot.data?.docs[index]['tool'], toolItem)  as List<String>).map((language) => Text(language.toString())).toList(),
+                                          //   ),
+                                          // ),
+                                          // DataCell(
+                                          //   Column(
+                                          //     crossAxisAlignment: CrossAxisAlignment.start,
+                                          //     children:
+                                          //     (getUtilDateListGetter(snapshot.data?.docs[index]['tool_years'], yearsCategoryItem)  as List<String>).map((language) => Text(language.toString())).toList(),
+                                          //   ),
+                                          //
+                                          // ),
                                     ])),
                               ));
                         })),
@@ -251,18 +395,26 @@ class _SearchPageState extends State<SearchPage> {
     List<String> codeLanguagesSelectItemsResult = await getStringListFromFirestore("utilData", "code_languages_item", "code_languages", true);//言語選択プルダウン
     //検索用
     List<String> codeLanguagesResult = await getStringListFromFirestore("utilData", "code_languages_item", "code_languages", false);//言語リスト
-    List<String> processItemResult = await getStringListFromFirestore("utilData", "code_languages_item", "code_languages", false);//工程取得リスト
-    List<String> teamRoleItemResult = await getStringListFromFirestore("utilData", "code_languages_item", "code_languages", false);//チーム役割取得リスト
-    List<String> codeLanguagesItemResults = await getStringListFromFirestore("utilData", "code_languages_item", "code_languages", false);//経験言語取得リスト
-    List<String> dbExperienceItemResult = await getStringListFromFirestore("utilData", "code_languages_item", "code_languages", false);//DB取得リスト
-    List<String> osExperienceItemResult = await getStringListFromFirestore("utilData", "code_languages_item", "code_languages", false);//OS取得リスト
-    List<String> cloudTechnologyItemResults = await getStringListFromFirestore("utilData", "code_languages_item", "code_languages", false);//クラウド取得リスト
-    List<String> toolItemResult = await getStringListFromFirestore("utilData", "code_languages_item", "code_languages", false);//ツール取得リスト
+    List<String> processItemResult = await getStringListFromFirestore("utilData", "process_item", "process", false);//工程取得リスト
+    List<String> teamRoleItemResult = await getStringListFromFirestore("utilData", "team_role_item", "team_role", false);//チーム役割取得リスト
+    List<String> dbExperienceItemResult = await getStringListFromFirestore("utilData", "db_experience_item", "db_experience", false);//DB取得リスト
+    List<String> osExperienceItemResult = await getStringListFromFirestore("utilData", "os_experience_item", "os_experience", false);//OS取得リスト
+    List<String> cloudTechnologyItemResult = await getStringListFromFirestore("utilData", "cloud_technology_item", "cloud_technology", false);//クラウド取得リスト
+    List<String> toolItemResult = await getStringListFromFirestore("utilData", "tool_item", "tool", false);//ツール取得リスト
+    List<String> experienceCategoryItemResult = await getStringListFromFirestore("utilData", "experience_category_item", "experience_category", false);//ツール取得リスト
+    List<String> yearsCategoryItemResult = await getStringListFromFirestore("utilData", "years_category_item", "years_category", false);//ツール取得リスト
+
     setState(() {
-      codeLanguagesSelectItems = codeLanguagesSelectItemsResult;//言語選択プルダウン
-      codeLanguagesItems = codeLanguagesResult;//言語リスト
-
-
+      codeLanguagesSelectItem = codeLanguagesSelectItemsResult;//言語選択プルダウン
+      codeLanguagesItem = codeLanguagesResult;//言語リスト
+      processItem = processItemResult;//工程取得リスト
+      teamRoleItem = teamRoleItemResult;//チーム役割取得リスト
+      dbExperienceItem = dbExperienceItemResult;//DB取得リスト
+      osExperienceItem = osExperienceItemResult;//OS取得リスト
+      cloudTechnologyItem = cloudTechnologyItemResult;//クラウド取得リスト
+      toolItem = toolItemResult;//ツール取得リスト
+      experienceCategoryItem = experienceCategoryItemResult;//経験程度リスト
+      yearsCategoryItem = yearsCategoryItemResult;//経験年リスト
     });
   }
   /* UtilDateのリストから文字列取得してListにして返す
@@ -316,7 +468,7 @@ class _SearchPageState extends State<SearchPage> {
   Future<void> addUser(int idVal, String first_nameVal, String last_nameVal,
       int ageVal, String nearest_station_line_nameVal, String nearest_station_nameVal,
       List<int> team_roleVal,List<int> team_role_yearsVal, List<int> code_languagesVal,List<int> code_languages_yearsVal,
-      List<int> processVal,List<int> process_yearsVal, List<int> db_experienceVal,List<int> db_experience_yearsVal,
+      List<int> processVal,List<int> process_experienceVal, List<int> db_experienceVal,List<int> db_experience_yearsVal,
       List<int> os_experienceVal, List<int> os_experience_yearsVal,
       List<int> cloud_technologyVal,List<int> cloud_technology_yearsVal,
       List<int> toolVal, List<int> tool_yearsVal
@@ -334,7 +486,7 @@ class _SearchPageState extends State<SearchPage> {
       await newEngineer.update({'team_role':team_roleVal}); //チーム役割
       await newEngineer.update({'team_role_years':team_role_yearsVal}); //チーム工程
       await newEngineer.update({'process':processVal}); //工程
-      await newEngineer.update({'process_years':process_yearsVal}); //工程経験
+      await newEngineer.update({'process_experience':process_experienceVal}); //工程経験
       await newEngineer.update({'code_languages': code_languagesVal}); //経験言語
       await newEngineer.update({'code_languages_years': code_languages_yearsVal}); //経験言語年数
       await newEngineer.update({'db_experience':db_experienceVal}); //DB経験
