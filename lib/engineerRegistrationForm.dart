@@ -30,9 +30,8 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
   List<String> _experienceCategories = [];
   List<String> _yearsCategories = [];
 
-
   final Map<String, String?> _teamRolesChecked = {};
-  final Map<String, String?> _processChecked = {};
+  final Map<String, String?> _processesChecked = {};
   final Map<String, String?> _codeLanguagesChecked = {};
   final Map<String, String?> _dbExperienceChecked = {};
   final Map<String, String?> _osExperienceChecked = {};
@@ -45,7 +44,7 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
     _fetchUtilData().then((data) {
       setState(() {
         _teamRoles =
-            List<String>.from(data['team_role'] ?? []); // Updated to _teamRoles
+            List<String>.from(data['team_role'] ?? []);
         _processes = List<String>.from(data['process'] ?? []);
         _codeLanguages = List<String>.from(data['code_languages'] ?? []);
         _dbExperience = List<String>.from(data['db_experience'] ?? []);
@@ -57,7 +56,7 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
         _yearsCategories = List<String>.from(data['years_category'] ?? []);
 
         _teamRolesChecked.clear();
-        _processChecked.clear();
+        _processesChecked.clear();
         _codeLanguagesChecked.clear();
         _dbExperienceChecked.clear();
         _osExperienceChecked.clear();
@@ -122,7 +121,6 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
           .doc('years_category_item')
           .get();
 
-
       if (docProcess.exists &&
           docExperienceCategory.exists &&
           docTeamRole.exists &&
@@ -136,14 +134,18 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
         return {
           'team_role': docTeamRole.data()!['team_role'] as List<dynamic>,
           'process': docProcess.data()!['process'] as List<dynamic>,
-          'code_languages': docCodeLanguages.data()!['code_languages'] as List<dynamic>,
+          'code_languages':
+              docCodeLanguages.data()!['code_languages'] as List<dynamic>,
           'experience_category': docExperienceCategory
               .data()!['experience_category'] as List<dynamic>,
           'years_category':
               docYearsCategory.data()!['years_category'] as List<dynamic>,
-          'db_experience': docDbExperience.data()!['db_experience'] as List<dynamic>,
-          'os_experience': docOsExperience.data()!['os_experience'] as List<dynamic>,
-          'cloud_technology': docCloudTech.data()!['cloud_technology'] as List<dynamic>,
+          'db_experience':
+              docDbExperience.data()!['db_experience'] as List<dynamic>,
+          'os_experience':
+              docOsExperience.data()!['os_experience'] as List<dynamic>,
+          'cloud_technology':
+              docCloudTech.data()!['cloud_technology'] as List<dynamic>,
           'tool': docTool.data()!['tool'] as List<dynamic>,
         };
       } else {
@@ -156,65 +158,216 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
   }
 
   Future<void> _registerEngineer() async {
+    // エラーチェック用の関数を定義
+    List<String> _checkRadioButtons() {
+      //エラーリストを初期化
+      List<String> errors = [];
+      _teamRolesChecked.forEach((teamRole, level) {
+        if (level == '選択') {
+          errors.add('チーム役割：$teamRole');
+        }
+      });
+      _processesChecked.forEach((process, level) {
+        if (level == '選択') {
+          errors.add('工程：$process');
+        }
+      });
+      _codeLanguagesChecked.forEach((codeLanguage, level) {
+        if (level == '選択') {
+          errors.add('経験言語：$codeLanguage');
+        }
+      });
+      _dbExperienceChecked.forEach((dbExperience, level) {
+        if (level == '選択') {
+          errors.add('DB経験：$dbExperience');
+        }
+      });
+      _osExperienceChecked.forEach((osExperience, level) {
+        if (level == '選択') {
+          errors.add('OS経験：$osExperience');
+        }
+      });
+      _cloudTechChecked.forEach((cloudTech, level) {
+        if (level == '選択') {
+          errors.add('クラウド技術：$cloudTech');
+        }
+      });
+      _toolChecked.forEach((tool, level) {
+        if (level == '選択') {
+          errors.add('ツール：$tool');
+        }
+      });
+      return errors;
+    }
+
+    //フォームがvalidateされた場合のみ実行
     if (_formKey.currentState!.validate()) {
+      //ラジオボタンが未選択の状態で登録ボタン押した場合
+      List<String> errors = _checkRadioButtons();
+      if (errors.isNotEmpty) {
+        String errorMessage = '${errors.join('\n')} の経験年数を選択してください';
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('入力エラー'),
+              content: Text(errorMessage),
+              actions: <Widget>[
+                TextButton(
+                  child: Text('OK'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            );
+          },
+        );
+        return;
+      }
       try {
-        Map<String, String> selectedTeamRoles = {};
+        // utilData から team_role 配列を取得
+        final docTeamRole = await FirebaseFirestore.instance
+            .collection('utilData')
+            .doc('team_role_item')
+            .get();
+        List<String> docTeamRoleList =
+        List<String>.from(docTeamRole.data()!['team_role'] ?? []);
+
+        List<int> selectedTeamRole = [];
+        List<int> selectedTeamRoleYears= [];
         _teamRolesChecked.forEach((teamRole, level) {
           if (level != null) {
-            selectedTeamRoles[teamRole] = level;
+            selectedTeamRole.add(docTeamRoleList.indexOf(teamRole));
+            selectedTeamRoleYears
+                .add(_yearsCategories.indexOf(level));
           }
         });
-        Map<String, String> selectedProcesses = {};
-        _processChecked.forEach((process, level) {
+
+        // utilData から process 配列を取得
+        final docProcess = await FirebaseFirestore.instance
+            .collection('utilData')
+            .doc('process_item')
+            .get();
+        List<String> docProcessList =
+        List<String>.from(docProcess.data()!['process'] ?? []);
+
+        List<int> selectedProcess = [];
+        List<int> selectedProcessExperience = [];
+        _processesChecked.forEach((process, level) {
           if (level != null) {
-            selectedProcesses[process] = level;
+            selectedProcess.add(docProcessList.indexOf(process));
+            selectedProcessExperience.add(_experienceCategories.indexOf(level));
           }
         });
-        Map<String, String> selectedCodeLanguages = {};
-        _codeLanguagesChecked.forEach((codeLanguages, level) {
+
+        // utilData から code_languages 配列を取得
+        final docCodeLanguages = await FirebaseFirestore.instance
+            .collection('utilData')
+            .doc('code_languages_item')
+            .get();
+        List<String> codeLanguagesList =
+            List<String>.from(docCodeLanguages.data()!['code_languages'] ?? []);
+
+        // 変更点: 各技術要素の選択された要素と年数を配列で登録
+        List<int> selectedCodeLanguages = [];
+        List<int> selectedCodeLanguagesYears = [];
+        _codeLanguagesChecked.forEach((codeLanguage, level) {
           if (level != null) {
-            selectedCodeLanguages[codeLanguages] = level;
+            selectedCodeLanguages.add(codeLanguagesList.indexOf(codeLanguage));
+            selectedCodeLanguagesYears.add(_yearsCategories.indexOf(level));
           }
         });
-        Map<String, String> selectedDbExperience = {};
+
+        // utilData から DbExperience 配列を取得
+        final docDbExperience = await FirebaseFirestore.instance
+            .collection('utilData')
+            .doc('db_experience_item')
+            .get();
+        List<String> dbExperienceList =
+            List<String>.from(docDbExperience.data()!['db_experience'] ?? []);
+
+        List<int> selectedDbExperience = [];
+        List<int> selectedDbExperienceYears = [];
         _dbExperienceChecked.forEach((dbExperience, level) {
           if (level != null) {
-            selectedDbExperience[dbExperience] = level;
+            selectedDbExperience.add(dbExperienceList.indexOf(dbExperience));
+            selectedDbExperienceYears.add(_yearsCategories.indexOf(level));
           }
         });
-        Map<String, String> selectedOsExperience = {};
+
+        // utilData から OsExperience 配列を取得
+        final docOsExperience = await FirebaseFirestore.instance
+            .collection('utilData')
+            .doc('os_experience_item')
+            .get();
+        List<String> docOsExperienceList =
+            List<String>.from(docOsExperience.data()!['os_experience'] ?? []);
+
+        List<int> selectedOsExperience = [];
+        List<int> selectedOsExperienceYears = [];
         _osExperienceChecked.forEach((osExperience, level) {
           if (level != null) {
-            selectedOsExperience[osExperience] = level;
+            selectedOsExperience.add(docOsExperienceList.indexOf(osExperience));
+            selectedOsExperienceYears.add(_yearsCategories.indexOf(level));
           }
         });
-        Map<String, String> selectedCloudTech = {};
+
+        // utilData から cloudTechnology 配列を取得
+        final docCloudTechnology = await FirebaseFirestore.instance
+            .collection('utilData')
+            .doc('cloud_technology_item')
+            .get();
+        List<String> docCloudTechnologyList = List<String>.from(
+            docCloudTechnology.data()!['cloud_technology'] ?? []);
+
+        List<int> selectedCloudTech = [];
+        List<int> selectedCloudTechYears = [];
         _cloudTechChecked.forEach((cloudTech, level) {
           if (level != null) {
-            selectedCloudTech[cloudTech] = level;
+            selectedCloudTech.add(docCloudTechnologyList.indexOf(cloudTech));
+            selectedCloudTechYears.add(_yearsCategories.indexOf(level));
           }
         });
-        Map<String, String> selectedTool = {};
+
+        // utilData から tool 配列を取得
+        final docTool = await FirebaseFirestore.instance
+            .collection('utilData')
+            .doc('tool_item')
+            .get();
+        List<String> docToolList =
+            List<String>.from(docTool.data()!['tool'] ?? []);
+
+        List<int> selectedTool = [];
+        List<int> selectedToolYears = [];
         _toolChecked.forEach((tool, level) {
           if (level != null) {
-            selectedTool[tool] = level;
+            selectedTool.add(docToolList.indexOf(tool));
+            selectedToolYears.add(_yearsCategories.indexOf(level));
           }
         });
-        await FirebaseFirestore.instance.collection('engineers').add({
-          'firstName': _firstNameController.text,
-          'lastName': _lastNameController.text,
+
+
+        await FirebaseFirestore.instance.collection('engineer').add({
+          'first_name': _firstNameController.text,
+          'last_name': _lastNameController.text,
           'age': int.parse(_ageController.text),
           'nearest_station_line_name': _nearestStationLineNameController.text,
           'nearest_station_name': _nearestStationNameController.text,
-          // Update to get text
-
-          'team_role': selectedTeamRoles,
-          'processes': selectedProcesses,
+          'team_role': selectedTeamRole,
+          'team_role_years': selectedTeamRoleYears,
+          'process': selectedProcess,
+          'process_experience': selectedProcessExperience,
           'code_languages': selectedCodeLanguages,
+          'code_languages_years': selectedCodeLanguagesYears,
           'db_experience': selectedDbExperience,
+          'db_experience_years': selectedDbExperienceYears,
           'os_experience': selectedOsExperience,
-          'cloud_tech': selectedCloudTech,
+          'os_experience_years': selectedOsExperienceYears,
+          'cloud_technology': selectedCloudTech,
+          'cloud_technology_years': selectedCloudTechYears,
           'tool': selectedTool,
+          'tool_years': selectedToolYears,
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('技術者登録が完了しました')),
@@ -244,7 +397,10 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
                     flex: 3,
                     child: TextFormField(
                       controller: _firstNameController,
-                      decoration: InputDecoration(labelText: '名'),
+                      decoration: InputDecoration(
+                        labelText: '名',
+                        prefixIcon: Icon(Icons.person), // ここにアイコンを追加
+                      ),
                       validator: (value) =>
                           value == null || value.isEmpty ? '名前を入力してください' : null,
                     ),
@@ -254,7 +410,10 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
                     flex: 3,
                     child: TextFormField(
                       controller: _lastNameController,
-                      decoration: InputDecoration(labelText: '苗字'),
+                      decoration: InputDecoration(
+                        labelText: '苗字',
+                        prefixIcon: Icon(Icons.person),
+                      ), // ここにアイコンを追加),
                       validator: (value) =>
                           value == null || value.isEmpty ? '苗字を入力してください' : null,
                     ),
@@ -264,25 +423,34 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
                     flex: 1,
                     child: TextFormField(
                       controller: _ageController,
-                      decoration: InputDecoration(labelText: '年齢'),
+                      decoration: InputDecoration(
+                        labelText: '年齢',
+                        prefixIcon: Icon(Icons.person_outline),
+                      ),
                       keyboardType: TextInputType.number,
                       validator: (value) {
-                        if (value == null || value.isEmpty) return '年齢を入力してください';
-                        return int.tryParse(value) == null ? '有効な年齢を入力してください' : null;
+                        if (value == null || value.isEmpty)
+                          return '年齢を入力してください';
+                        return int.tryParse(value) == null
+                            ? '有効な年齢を入力してください'
+                            : null;
                       },
                     ),
                   ),
                 ],
               ),
-
               Row(
                 children: [
                   Expanded(
                     flex: 3,
                     child: TextFormField(
                       controller: _nearestStationLineNameController,
-                      decoration: InputDecoration(labelText: '最寄沿線'),
-                      validator: (value) => value == null || value.isEmpty ? '最寄沿線を入力してください' : null,
+                      decoration: InputDecoration(
+                          labelText: '最寄沿線',
+                          prefixIcon: Icon(Icons.linear_scale)),
+                      validator: (value) => value == null || value.isEmpty
+                          ? '最寄沿線を入力してください'
+                          : null,
                     ),
                   ),
                   SizedBox(width: 16),
@@ -290,8 +458,11 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
                     flex: 3,
                     child: TextFormField(
                       controller: _nearestStationNameController,
-                      decoration: InputDecoration(labelText: '最寄駅'),
-                      validator: (value) => value == null || value.isEmpty ? '最寄駅を入力してください' : null,
+                      decoration: InputDecoration(
+                          labelText: '最寄駅', prefixIcon: Icon(Icons.train)),
+                      validator: (value) => value == null || value.isEmpty
+                          ? '最寄駅を入力してください'
+                          : null,
                     ),
                   ),
                 ],
@@ -306,7 +477,13 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
                   ),
                 ),
                 child: ExpansionTile(
-                  title: Text('チーム役割'),
+                  title: Row(
+                    children: [
+                      Icon(Icons.group), // ここに表示したいアイコンを指定します
+                      SizedBox(width: 8), // アイコンとテキストの間にスペースを追加
+                      Text('チーム役割'),
+                    ],
+                  ),
                   childrenPadding: EdgeInsets.only(left: 16.0, bottom: 16.0),
                   children: _teamRoles.map((teamRoles) {
                     return Column(
@@ -365,7 +542,13 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
                   ),
                 ),
                 child: ExpansionTile(
-                  title: Text('▼工程'),
+                  title: Row(
+                    children: [
+                      Icon(Icons.account_tree), // Icons.build アイコンを使用
+                      SizedBox(width: 8),
+                      Text('工程'),
+                    ],
+                  ),
                   children: _processes.map((process) {
                     return Padding(
                       padding: const EdgeInsets.only(left: 16.0),
@@ -374,16 +557,16 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
                         children: [
                           CheckboxListTile(
                             title: Text(process),
-                            value: _processChecked[process] != null,
+                            value: _processesChecked[process] != null,
                             onChanged: (value) {
                               setState(() {
-                                _processChecked[process] = value! ? '選択' : null;
+                                _processesChecked[process] = value! ? '選択' : null;
                               });
                             },
                             controlAffinity: ListTileControlAffinity.leading,
                             contentPadding: EdgeInsets.zero,
                           ),
-                          if (_processChecked[process] != null)
+                          if (_processesChecked[process] != null)
                             Padding(
                               padding: const EdgeInsets.only(left: 16.0),
                               child: Wrap(
@@ -397,10 +580,10 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
                                       child: Text(experienceCategory),
                                     ),
                                     value: experienceCategory,
-                                    groupValue: _processChecked[process],
+                                    groupValue: _processesChecked[process],
                                     onChanged: (value) {
                                       setState(() {
-                                        _processChecked[process] = value;
+                                        _processesChecked[process] = value;
                                       });
                                     },
                                     contentPadding: EdgeInsets.zero,
@@ -426,7 +609,13 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
                   ),
                 ),
                 child: ExpansionTile(
-                  title: Text('▼経験言語'),
+                  title: Row(
+                    children: [
+                      Icon(Icons.developer_mode), // Icons.code アイコンを使用
+                      SizedBox(width: 8),
+                      Text('経験言語'),
+                    ],
+                  ),
                   children: _codeLanguages.map((codeLanguages) {
                     return Padding(
                       padding: const EdgeInsets.only(left: 16.0),
@@ -438,7 +627,8 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
                             value: _codeLanguagesChecked[codeLanguages] != null,
                             onChanged: (value) {
                               setState(() {
-                                _codeLanguagesChecked[codeLanguages] = value! ? '選択' : null;
+                                _codeLanguagesChecked[codeLanguages] =
+                                    value! ? '選択' : null;
                               });
                             },
                             controlAffinity: ListTileControlAffinity.leading,
@@ -449,24 +639,25 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
                               padding: const EdgeInsets.only(left: 16.0),
                               child: Wrap(
                                 spacing: 8.0,
-                                children: _yearsCategories
-                                    .map((yearsCategory) {
+                                children: _yearsCategories.map((yearsCategory) {
                                   return RadioListTile<String>(
                                     title: Padding(
                                       padding:
-                                      const EdgeInsets.only(left: 16.0 * 4),
+                                          const EdgeInsets.only(left: 16.0 * 4),
                                       child: Text(yearsCategory),
                                     ),
                                     value: yearsCategory,
-                                    groupValue: _codeLanguagesChecked[codeLanguages],
+                                    groupValue:
+                                        _codeLanguagesChecked[codeLanguages],
                                     onChanged: (value) {
                                       setState(() {
-                                        _codeLanguagesChecked[codeLanguages] = value;
+                                        _codeLanguagesChecked[codeLanguages] =
+                                            value;
                                       });
                                     },
                                     contentPadding: EdgeInsets.zero,
                                     controlAffinity:
-                                    ListTileControlAffinity.trailing,
+                                        ListTileControlAffinity.trailing,
                                   );
                                 }).toList(),
                               ),
@@ -487,7 +678,13 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
                   ),
                 ),
                 child: ExpansionTile(
-                  title: Text('▼DB言語'),
+                  title: Row(
+                    children: [
+                      Icon(Icons.storage),
+                      SizedBox(width: 8),
+                      Text('DB言語'),
+                    ],
+                  ),
                   children: _dbExperience.map((dbExperience) {
                     return Padding(
                       padding: const EdgeInsets.only(left: 16.0),
@@ -499,35 +696,37 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
                             value: _dbExperienceChecked[dbExperience] != null,
                             onChanged: (value) {
                               setState(() {
-                                _dbExperienceChecked[dbExperience]  = value! ? '選択' : null;
+                                _dbExperienceChecked[dbExperience] =
+                                    value! ? '選択' : null;
                               });
                             },
                             controlAffinity: ListTileControlAffinity.leading,
                             contentPadding: EdgeInsets.zero,
                           ),
-                          if (_dbExperienceChecked[dbExperience]  != null)
+                          if (_dbExperienceChecked[dbExperience] != null)
                             Padding(
                               padding: const EdgeInsets.only(left: 16.0),
                               child: Wrap(
                                 spacing: 8.0,
-                                children: _yearsCategories
-                                    .map((yearsCategory) {
+                                children: _yearsCategories.map((yearsCategory) {
                                   return RadioListTile<String>(
                                     title: Padding(
                                       padding:
-                                      const EdgeInsets.only(left: 16.0 * 4),
+                                          const EdgeInsets.only(left: 16.0 * 4),
                                       child: Text(yearsCategory),
                                     ),
                                     value: yearsCategory,
-                                    groupValue: _dbExperienceChecked[dbExperience] ,
+                                    groupValue:
+                                        _dbExperienceChecked[dbExperience],
                                     onChanged: (value) {
                                       setState(() {
-                                        _dbExperienceChecked[dbExperience] = value;
+                                        _dbExperienceChecked[dbExperience] =
+                                            value;
                                       });
                                     },
                                     contentPadding: EdgeInsets.zero,
                                     controlAffinity:
-                                    ListTileControlAffinity.trailing,
+                                        ListTileControlAffinity.trailing,
                                   );
                                 }).toList(),
                               ),
@@ -548,7 +747,13 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
                   ),
                 ),
                 child: ExpansionTile(
-                  title: Text('▼OS経験'),
+                  title: Row(
+                    children: [
+                      Icon(Icons.memory), // Icons.code アイコンを使用
+                      SizedBox(width: 8),
+                      Text('OS言語'),
+                    ],
+                  ),
                   children: _osExperience.map((osExperience) {
                     return Padding(
                       padding: const EdgeInsets.only(left: 16.0),
@@ -560,7 +765,8 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
                             value: _osExperienceChecked[osExperience] != null,
                             onChanged: (value) {
                               setState(() {
-                                _osExperienceChecked[osExperience] = value! ? '選択' : null;
+                                _osExperienceChecked[osExperience] =
+                                    value! ? '選択' : null;
                               });
                             },
                             controlAffinity: ListTileControlAffinity.leading,
@@ -571,24 +777,25 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
                               padding: const EdgeInsets.only(left: 16.0),
                               child: Wrap(
                                 spacing: 8.0,
-                                children: _yearsCategories
-                                    .map((yearsCategory) {
+                                children: _yearsCategories.map((yearsCategory) {
                                   return RadioListTile<String>(
                                     title: Padding(
                                       padding:
-                                      const EdgeInsets.only(left: 16.0 * 4),
+                                          const EdgeInsets.only(left: 16.0 * 4),
                                       child: Text(yearsCategory),
                                     ),
                                     value: yearsCategory,
-                                    groupValue: _osExperienceChecked[osExperience],
+                                    groupValue:
+                                        _osExperienceChecked[osExperience],
                                     onChanged: (value) {
                                       setState(() {
-                                        _osExperienceChecked[osExperience] = value;
+                                        _osExperienceChecked[osExperience] =
+                                            value;
                                       });
                                     },
                                     contentPadding: EdgeInsets.zero,
                                     controlAffinity:
-                                    ListTileControlAffinity.trailing,
+                                        ListTileControlAffinity.trailing,
                                   );
                                 }).toList(),
                               ),
@@ -609,7 +816,13 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
                   ),
                 ),
                 child: ExpansionTile(
-                  title: Text('▼クラウド技術'),
+                  title: Row(
+                    children: [
+                      Icon(Icons.cloud), // Icons.code アイコンを使用
+                      SizedBox(width: 8),
+                      Text('クラウド技術'),
+                    ],
+                  ),
                   children: _cloudTech.map((cloudTech) {
                     return Padding(
                       padding: const EdgeInsets.only(left: 16.0),
@@ -621,7 +834,8 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
                             value: _cloudTechChecked[cloudTech] != null,
                             onChanged: (value) {
                               setState(() {
-                                _cloudTechChecked[cloudTech] = value! ? '選択' : null;
+                                _cloudTechChecked[cloudTech] =
+                                    value! ? '選択' : null;
                               });
                             },
                             controlAffinity: ListTileControlAffinity.leading,
@@ -632,24 +846,23 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
                               padding: const EdgeInsets.only(left: 16.0),
                               child: Wrap(
                                 spacing: 8.0,
-                                children: _yearsCategories
-                                    .map((yearsCategory) {
+                                children: _yearsCategories.map((yearsCategory) {
                                   return RadioListTile<String>(
                                     title: Padding(
                                       padding:
-                                      const EdgeInsets.only(left: 16.0 * 4),
+                                          const EdgeInsets.only(left: 16.0 * 4),
                                       child: Text(yearsCategory),
                                     ),
                                     value: yearsCategory,
-                                    groupValue:_cloudTechChecked[cloudTech] ,
+                                    groupValue: _cloudTechChecked[cloudTech],
                                     onChanged: (value) {
                                       setState(() {
-                                        _cloudTechChecked[cloudTech]  = value;
+                                        _cloudTechChecked[cloudTech] = value;
                                       });
                                     },
                                     contentPadding: EdgeInsets.zero,
                                     controlAffinity:
-                                    ListTileControlAffinity.trailing,
+                                        ListTileControlAffinity.trailing,
                                   );
                                 }).toList(),
                               ),
@@ -670,7 +883,13 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
                   ),
                 ),
                 child: ExpansionTile(
-                  title: Text('▼ツール'),
+                  title: Row(
+                    children: [
+                      Icon(Icons.build), // Icons.code アイコンを使用
+                      SizedBox(width: 8),
+                      Text('ツール'),
+                    ],
+                  ),
                   children: _tool.map((tool) {
                     return Padding(
                       padding: const EdgeInsets.only(left: 16.0),
@@ -693,24 +912,23 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
                               padding: const EdgeInsets.only(left: 16.0),
                               child: Wrap(
                                 spacing: 8.0,
-                                children: _yearsCategories
-                                    .map((yearsCategory) {
+                                children: _yearsCategories.map((yearsCategory) {
                                   return RadioListTile<String>(
                                     title: Padding(
                                       padding:
-                                      const EdgeInsets.only(left: 16.0 * 4),
+                                          const EdgeInsets.only(left: 16.0 * 4),
                                       child: Text(yearsCategory),
                                     ),
                                     value: yearsCategory,
-                                    groupValue:_toolChecked[tool] ,
+                                    groupValue: _toolChecked[tool],
                                     onChanged: (value) {
                                       setState(() {
-                                        _toolChecked[tool]  = value;
+                                        _toolChecked[tool] = value;
                                       });
                                     },
                                     contentPadding: EdgeInsets.zero,
                                     controlAffinity:
-                                    ListTileControlAffinity.trailing,
+                                        ListTileControlAffinity.trailing,
                                   );
                                 }).toList(),
                               ),
