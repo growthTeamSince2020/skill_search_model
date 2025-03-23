@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:developer';
-import 'dart:js_util';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
@@ -19,8 +17,9 @@ class _SearchPageState extends State<SearchPage> {
   final logger = Logger(); //ロガーの宣言
 
   /* 検索条件用　*/
-  String newKeyWord = "";//キーワードテキスト入力
-  String textdata = "";//キーワードテキスト入力保持
+  //キーワード検索は一旦封印
+  // String newKeyWord = "";//キーワードテキスト入力
+  // String textdata = "";//キーワードテキスト入力保持
   String codeLanguagesDropdownSelectedValue = "";//言語選択条件値保持
   List<String> codeLanguagesSelectItem = [];//言語選択条件リスト
   int ageDropdownSelectedValue = 0;//年齢選択条件値保持
@@ -45,6 +44,7 @@ class _SearchPageState extends State<SearchPage> {
   }
   @override
   void initState() {
+    super.initState();
     _fetchData(); // 別メソッドで非同期処理を実行
   }
 
@@ -52,26 +52,27 @@ class _SearchPageState extends State<SearchPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('スキル検索モデル'),
+        title: const Text('エンジニア検索'),
       ),
       body: Container(
-        margin: EdgeInsets.all(50),
+        margin: const EdgeInsets.all(50),
         child: SizedBox(
           width: double.infinity,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              TextField(
-                controller: _controller,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: 'キーワードを入力してください。',
-                ),
-                // 入力内容をtextに格納
-                onChanged: (value) {
-                  newKeyWord = value;
-                },
-              ),
+              //キーワード検索封印
+              // TextField(
+              //   controller: _controller,
+              //   autofocus: true,
+              //   decoration: const InputDecoration(
+              //     hintText: 'キーワードを入力してください。',
+              //   ),
+              //   // 入力内容をtextに格納
+              //   onChanged: (value) {
+              //     newKeyWord = value;
+              //   },
+              // ),
               Row(
                 children: [
                   //プルダウン　経験言語
@@ -81,11 +82,9 @@ class _SearchPageState extends State<SearchPage> {
                       // selectedValue = value!;
                       setState(() {
                         codeLanguagesDropdownSelectedValue = value!;
-                        logger.d("'プルダウン押下　値変更: ${value}'");
+                        logger.d("'プルダウン押下　値変更: $value'");
                       });
                     },
-
-                    //TODO:別リストをどこかで持ちたい→テーブル化→汎用テーブル
                     items: codeLanguagesSelectItem
                         .map<DropdownMenuItem<String>>((String value) {
                       return DropdownMenuItem<String>(
@@ -98,8 +97,7 @@ class _SearchPageState extends State<SearchPage> {
                   //プルダウン　年齢
                   DropdownButton<int>(
                     value: ageDropdownSelectedValue,
-                    //TODO:別リストをどこかで持ちたい→テーブル化→汎用テーブル　
-                    items: [
+                    items: const [
                       DropdownMenuItem(value: 0,child: Text(constData.searchAgeSelectStringDefault)),
                       DropdownMenuItem(value: 30,child: Text(constData.searchAgeSelectStringUnder30)),
                       DropdownMenuItem(value: 40,child: Text(constData.searchAgeSelectStringUnder40)),
@@ -117,18 +115,19 @@ class _SearchPageState extends State<SearchPage> {
               ),
               Row(
                 children: [
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.greenAccent,
-                        fixedSize: const Size(75, 25)),
-                    child: const Text('検索'),
-                    onPressed: () {
-                      setState(() {
-                        textdata = newKeyWord;
-                        logger.d("'検索ボタン押下　キーワード: ${textdata}'");
-                      });
-                    },
-                  ),
+                  //キーワード検索は一旦封印
+                  // ElevatedButton(
+                  //   style: ElevatedButton.styleFrom(
+                  //       backgroundColor: Colors.greenAccent,
+                  //       fixedSize: const Size(75, 25)),
+                  //   child: const Text('検索'),
+                  //   onPressed: () {
+                  //     setState(() {
+                  //       textdata = newKeyWord;
+                  //       logger.d("'検索ボタン押下　キーワード: ${textdata}'");
+                  //     });
+                  //   },
+                  // ),
                   const SizedBox(width: 10),
                   ElevatedButton(
                     //テスト作成ボタン
@@ -183,24 +182,29 @@ class _SearchPageState extends State<SearchPage> {
                             AsyncSnapshot<QuerySnapshot> snapshot) {
                           if (snapshot.hasError) {
                             logger.w("'Error: ${snapshot.error}'");
-                            return Text('Something went wrong');
+                            return const Text('Something went wrong');
                           }
 
                           if (snapshot.connectionState ==
                               ConnectionState.waiting) {
-                            return Text("Loading");
+                            return const Text("Loading");
                           }
 
                           return SingleChildScrollView(
-                              scrollDirection: Axis.vertical,//スクロールの方向、水平
+                              scrollDirection: Axis.horizontal,
 
                               child: DataTable(
-                                dataRowHeight: 100.0,
+                                border: TableBorder.all(width: 1, color: Colors.grey),
+                                //columnSpacing: 10.0,
+                                headingRowColor: MaterialStateProperty.all(Colors.black),
+                                headingTextStyle: const TextStyle(color: Colors.white),
+                                headingRowHeight: 30.0,
+                                dataRowMinHeight: 25.0,
+                                dataRowMaxHeight: 100.0,
                                 columns: const [
                                   DataColumn(label: Text('氏名')),
                                   DataColumn(label: Text('年齢')),
                                   DataColumn(label: Text('最寄駅')),
-                                  // DataColumn(label: Text('使用言語 経験年数')),
                                   DataColumn(label: Text('工程')),
                                   DataColumn(label: Text('工程経験')),
                                   DataColumn(label: Text('チーム')),
@@ -213,7 +217,12 @@ class _SearchPageState extends State<SearchPage> {
                                   DataColumn(label: Text('OS経験')),
                                   DataColumn(label: Text('クラウド')),
                                   DataColumn(label: Text('クラウド経験')),
-                                  // DataColumn(label: Text('言語経験')),
+                                  DataColumn(label: Text('クラウド')),
+                                  DataColumn(label: Text('クラウド経験')),
+                                  DataColumn(label: Text('クラウド')),
+                                  DataColumn(label: Text('クラウド経験')),
+                                  DataColumn(label: Text('クラウド')),
+                                  DataColumn(label: Text('クラウド経験')),
                                 ],
                                 rows: List<DataRow>.generate(
                                     snapshot.data?.size as int,
@@ -230,19 +239,13 @@ class _SearchPageState extends State<SearchPage> {
                                       'nearest_station_line_name'] +
                                           snapshot.data?.docs[index]
                                           ['nearest_station_name'])),
-                                      // DataCell(
-                                      //   Column(
-                                      //     crossAxisAlignment: CrossAxisAlignment.start,
-                                      //     children:
-                                      //     (getUtilDateListGetter(snapshot.data?.docs[index]['code_languages'], codeLanguagesItem)  as List<String>).map((language) => Text(language.toString())).toList(),
-                                      //   ),
-                                      // ),
+
                                           //工程
                                           DataCell(
                                             Column(
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: (getUtilDateListGetter(snapshot.data?.docs[index]['process'], processItem) as List<String>)
-                                                  .map((language) => Text(language.toString(), style: TextStyle(fontSize: constData.rowItemfontsize))) // フォントサイズを小さくする
+                                                  .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize))) // フォントサイズを小さくする
                                                   .toList(),
                                             ),
                                           ),
@@ -348,21 +351,60 @@ class _SearchPageState extends State<SearchPage> {
                                                   .toList(),
                                             ),
                                           ),
-                                          // DataCell(
-                                          //   Column(
-                                          //     crossAxisAlignment: CrossAxisAlignment.start,
-                                          //     children:
-                                          //     (getUtilDateListGetter(snapshot.data?.docs[index]['tool'], toolItem)  as List<String>).map((language) => Text(language.toString())).toList(),
-                                          //   ),
-                                          // ),
-                                          // DataCell(
-                                          //   Column(
-                                          //     crossAxisAlignment: CrossAxisAlignment.start,
-                                          //     children:
-                                          //     (getUtilDateListGetter(snapshot.data?.docs[index]['tool_years'], yearsCategoryItem)  as List<String>).map((language) => Text(language.toString())).toList(),
-                                          //   ),
-                                          //
-                                          // ),
+                                          DataCell(
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children:
+                                              (getUtilDateListGetter(snapshot.data?.docs[index]['cloud_technology'], cloudTechnologyItem)  as List<String>)
+                                                  .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
+                                                  .toList(),
+                                            ),
+                                          ),
+                                          DataCell(
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children:
+                                              (getUtilDateListGetter(snapshot.data?.docs[index]['cloud_technology_years'], yearsCategoryItem)  as List<String>)
+                                                  .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
+                                                  .toList(),
+                                            ),
+                                          ),
+                                          DataCell(
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children:
+                                              (getUtilDateListGetter(snapshot.data?.docs[index]['cloud_technology'], cloudTechnologyItem)  as List<String>)
+                                                  .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
+                                                  .toList(),
+                                            ),
+                                          ),
+                                          DataCell(
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children:
+                                              (getUtilDateListGetter(snapshot.data?.docs[index]['cloud_technology_years'], yearsCategoryItem)  as List<String>)
+                                                  .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
+                                                  .toList(),
+                                            ),
+                                          ),
+                                          DataCell(
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children:
+                                              (getUtilDateListGetter(snapshot.data?.docs[index]['cloud_technology'], cloudTechnologyItem)  as List<String>)
+                                                  .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
+                                                  .toList(),
+                                            ),
+                                          ),
+                                          DataCell(
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children:
+                                              (getUtilDateListGetter(snapshot.data?.docs[index]['cloud_technology_years'], yearsCategoryItem)  as List<String>)
+                                                  .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
+                                                  .toList(),
+                                            ),
+                                          ),
                                     ])),
                               ));
                         })),
@@ -374,9 +416,12 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
+  /* 検索条件を指定してクエリを作成して返す
+   * @param なし
+   * @return なし
+  */
   Stream<QuerySnapshot> getStream() {
     // 検索条件を元にクエリを作成
-    // TODO:Firebaseのインデックス管理は下記の記載順と同じにする
     Query query = engineer;
     if (codeLanguagesDropdownSelectedValue.isNotEmpty) {
       query = query.where("code_languages", isEqualTo: codeLanguagesDropdownSelectedValue);
@@ -441,10 +486,8 @@ class _SearchPageState extends State<SearchPage> {
           return codeLanguagesString;
         }
       } else {
-        print("Document does not exist");
       }
     } catch (e) {
-      print("Error getting document: $e");
     }
     return []; // エラーまたはドキュメントが存在しない場合は空のリストを返す
   }
@@ -458,7 +501,6 @@ class _SearchPageState extends State<SearchPage> {
     List<String> utilDataListForReturn = [];
 
     for (var item in numberList) {
-      print(utilDataArray[item]);
       utilDataListForReturn.add(utilDataArray[item]);
     }
     return utilDataListForReturn;
@@ -499,7 +541,7 @@ class _SearchPageState extends State<SearchPage> {
       await newEngineer.update({'tool_years':tool_yearsVal}); //ツール経験
 
     } catch (e) {
-      print('Error adding code_language or code_languages: $e');
+      logger.d("Error adding document: $e");
     }
   }
 
