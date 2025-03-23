@@ -47,12 +47,14 @@ class _SearchPageState extends State<SearchPage> {
 
   @override
   Widget build(BuildContext context) {
+    final Size size = MediaQuery.of(context).size; // 画面サイズ取得
+    debugPrint('画面サイズ：${size.width} x ${size.height}');
     return Scaffold(
       appBar: AppBar(
         title: const Text('エンジニア検索'),
       ),
       body: Container(
-        width: 1800,
+        // width: 2500,
         margin: const EdgeInsets.all(50),
         child: SizedBox(
           width: double.infinity,
@@ -180,7 +182,9 @@ class _SearchPageState extends State<SearchPage> {
 
                           return SingleChildScrollView(
                               scrollDirection: Axis.horizontal,
-
+                              child:
+                                SingleChildScrollView(
+                                    scrollDirection: Axis.vertical,
                               child: DataTable(
                                 border: TableBorder.all(width: 1, color: Colors.grey),
                                 //columnSpacing: 10.0,
@@ -394,7 +398,7 @@ class _SearchPageState extends State<SearchPage> {
                                         ),
                                       ),
                                     ])),
-                              ));
+                              )));
                         })),
               ),
             ],
@@ -532,5 +536,4 @@ class _SearchPageState extends State<SearchPage> {
       logger.d("Error adding document: $e");
     }
   }
-
 }
