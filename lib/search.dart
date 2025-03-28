@@ -15,6 +15,7 @@ class _SearchPageState extends State<SearchPage> {
   // FireStoreの'arrays'コレクションのすべてのドキュメントを取得するプロバイダー。初回に全件分、あとは変更があるたびStreamに通知される。
   final TextEditingController _controller = TextEditingController();
   final logger = Logger(); //ロガーの宣言
+  final nonData = constData.searchAgeSelectStringDefault; //定数クラスの宣言
 
   /* 検索条件用　*/
   String codeLanguagesDropdownSelectedValue = "";//言語選択条件値保持
@@ -185,7 +186,10 @@ class _SearchPageState extends State<SearchPage> {
                               child:
                                 SingleChildScrollView(
                                     scrollDirection: Axis.vertical,
-                              child: DataTable(
+                              // child: IntrinsicWidth(
+                              //       child: SizedBox(
+                              //           width: MediaQuery.of(context).size.width * 2,
+                                        child: DataTable(
                                 border: TableBorder.all(width: 1, color: Colors.grey),
                                 //columnSpacing: 10.0,
                                 headingRowColor: MaterialStateProperty.all(Colors.black),
@@ -209,6 +213,7 @@ class _SearchPageState extends State<SearchPage> {
                                   DataColumn(label: Text('OS経験')),
                                   DataColumn(label: Text('クラウド')),
                                   DataColumn(label: Text('クラウド経験')),
+                                  // TODO:下後削除　スクロール試しているだけで意味のない列
                                   DataColumn(label: Text('クラウド')),
                                   DataColumn(label: Text('クラウド経験')),
                                   DataColumn(label: Text('クラウド')),
@@ -233,57 +238,68 @@ class _SearchPageState extends State<SearchPage> {
                                           ['nearest_station_name'])),
 
                                       //工程
+                                          DataCell(
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: (snapshot.data?.docs[index]['process'] != null && (snapshot.data?.docs[index]['process'] as List).isNotEmpty)
+                                                  ? (getUtilDateListGetter(snapshot.data?.docs[index]['process'], processItem) as List<String>)
+                                                  .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
+                                                  .toList()
+                                                  : [Text(nonData, style: const TextStyle(fontSize: constData.rowItemfontsize))], // データがない場合の表示
+                                            ),
+                                          ),
                                       DataCell(
                                         Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: (getUtilDateListGetter(snapshot.data?.docs[index]['process'], processItem) as List<String>)
-                                              .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize))) // フォントサイズを小さくする
-                                              .toList(),
-                                        ),
-                                      ),
-                                      DataCell(
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children:
-                                          (getUtilDateListGetter(snapshot.data?.docs[index]['process_experience'], experienceCategoryItem)  as List<String>)
+                                          children: (snapshot.data?.docs[index]['process_experience'] != null && (snapshot.data?.docs[index]['process_experience'] as List).isNotEmpty)
+                                              ? (getUtilDateListGetter(snapshot.data?.docs[index]['process_experience'], experienceCategoryItem)  as List<String>)
                                               .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
-                                              .toList(),
+                                              .toList()
+                                              : [Text(nonData, style: const TextStyle(fontSize: constData.rowItemfontsize))], // データがない場合の表示
                                         ),
                                       ),
                                       //チーム
                                       DataCell(
                                         Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: (getUtilDateListGetter(snapshot.data?.docs[index]['team_role'], teamRoleItem) as List<String>)
+                                          children: (snapshot.data?.docs[index]['team_role'] != null && (snapshot.data?.docs[index]['team_role'] as List).isNotEmpty)
+                                              ? (getUtilDateListGetter(snapshot.data?.docs[index]['team_role'], teamRoleItem) as List<String>)
                                               .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize))) // フォントサイズを小さくする
-                                              .toList(),
+                                              .toList()
+                                              : [Text(nonData, style: const TextStyle(fontSize: constData.rowItemfontsize))],
                                         ),
                                       ),
                                       DataCell(
                                         Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children:
-                                          (getUtilDateListGetter(snapshot.data?.docs[index]['team_role_years'], yearsCategoryItem)  as List<String>)
+                                          (snapshot.data?.docs[index]['team_role_years'] != null && (snapshot.data?.docs[index]['team_role_years'] as List).isNotEmpty)
+                                              ? (getUtilDateListGetter(snapshot.data?.docs[index]['team_role_years'], yearsCategoryItem)  as List<String>)
                                               .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
-                                              .toList(),
+                                              .toList()
+                                              : [Text(nonData, style: const TextStyle(fontSize: constData.rowItemfontsize))],
                                         ),
                                       ),
                                       //プログラミング言語
                                       DataCell(
                                         Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: (getUtilDateListGetter(snapshot.data?.docs[index]['code_languages'], codeLanguagesItem) as List<String>)
+                                          children: (snapshot.data?.docs[index]['code_languages'] != null && (snapshot.data?.docs[index]['code_languages'] as List).isNotEmpty)
+                                              ? (getUtilDateListGetter(snapshot.data?.docs[index]['code_languages'], codeLanguagesItem) as List<String>)
                                               .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize))) // フォントサイズを小さくする
-                                              .toList(),
+                                              .toList()
+                                              : [Text(nonData, style: const TextStyle(fontSize: constData.rowItemfontsize))],
                                         ),
                                       ),
                                       DataCell(
                                         Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children:
-                                          (getUtilDateListGetter(snapshot.data?.docs[index]['code_languages_years'], yearsCategoryItem)  as List<String>)
+                                          (snapshot.data?.docs[index]['code_languages_years'] != null && (snapshot.data?.docs[index]['code_languages_years'] as List).isNotEmpty)
+                                              ? (getUtilDateListGetter(snapshot.data?.docs[index]['code_languages_years'], yearsCategoryItem)  as List<String>)
                                               .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
-                                              .toList(),
+                                              .toList()
+                                              : [Text(nonData, style: const TextStyle(fontSize: constData.rowItemfontsize))],
                                         ),
                                       ),
                                       //DB
@@ -291,18 +307,22 @@ class _SearchPageState extends State<SearchPage> {
                                         Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children:
-                                          (getUtilDateListGetter(snapshot.data?.docs[index]['db_experience'], dbExperienceItem)  as List<String>)
+                                          (snapshot.data?.docs[index]['db_experience'] != null && (snapshot.data?.docs[index]['db_experience'] as List).isNotEmpty)
+                                              ? (getUtilDateListGetter(snapshot.data?.docs[index]['db_experience'], dbExperienceItem)  as List<String>)
                                               .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
-                                              .toList(),
+                                              .toList()
+                                          : [Text(nonData, style: const TextStyle(fontSize: constData.rowItemfontsize))],
                                         ),
                                       ),
                                       DataCell(
                                         Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children:
-                                          (getUtilDateListGetter(snapshot.data?.docs[index]['db_experience_years'], yearsCategoryItem)  as List<String>)
+                                          (snapshot.data?.docs[index]['db_experience_years'] != null && (snapshot.data?.docs[index]['db_experience_years'] as List).isNotEmpty)
+                                              ? (getUtilDateListGetter(snapshot.data?.docs[index]['db_experience_years'], yearsCategoryItem)  as List<String>)
                                               .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
-                                              .toList(),
+                                              .toList()
+                                              : [Text(nonData, style: const TextStyle(fontSize: constData.rowItemfontsize))],
                                         ),
                                       ),
                                       //OS
@@ -310,95 +330,118 @@ class _SearchPageState extends State<SearchPage> {
                                         Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children:
-                                          (getUtilDateListGetter(snapshot.data?.docs[index]['os_experience'], osExperienceItem)  as List<String>)
+                                          (snapshot.data?.docs[index]['os_experience'] != null && (snapshot.data?.docs[index]['os_experience'] as List).isNotEmpty)
+                                              ? (getUtilDateListGetter(snapshot.data?.docs[index]['os_experience'], osExperienceItem)  as List<String>)
                                               .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
-                                              .toList(),
+                                              .toList()
+                                              : [Text(nonData, style: const TextStyle(fontSize: constData.rowItemfontsize))],
                                         ),
                                       ),
                                       DataCell(
                                         Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children:
-                                          (getUtilDateListGetter(snapshot.data?.docs[index]['os_experience_years'], yearsCategoryItem)  as List<String>)
+                                          (snapshot.data?.docs[index]['os_experience_years'] != null && (snapshot.data?.docs[index]['os_experience_years'] as List).isNotEmpty)
+                                              ? (getUtilDateListGetter(snapshot.data?.docs[index]['os_experience_years'], yearsCategoryItem)  as List<String>)
                                               .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
-                                              .toList(),
+                                              .toList()
+                                              : [Text(nonData, style: const TextStyle(fontSize: constData.rowItemfontsize))],
                                         ),
                                       ),
-
+                                      //クラウド
                                       DataCell(
                                         Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children:
-                                          (getUtilDateListGetter(snapshot.data?.docs[index]['cloud_technology'], cloudTechnologyItem)  as List<String>)
+                                          (snapshot.data?.docs[index]['cloud_technology'] != null && (snapshot.data?.docs[index]['cloud_technology'] as List).isNotEmpty)
+                                              ? (getUtilDateListGetter(snapshot.data?.docs[index]['cloud_technology'], cloudTechnologyItem)  as List<String>)
                                               .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
-                                              .toList(),
-                                        ),
-                                      ),
-                                      DataCell(
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children:
-                                          (getUtilDateListGetter(snapshot.data?.docs[index]['cloud_technology_years'], yearsCategoryItem)  as List<String>)
-                                              .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
-                                              .toList(),
+                                              .toList()
+                                              : [Text(nonData, style: const TextStyle(fontSize: constData.rowItemfontsize))],
                                         ),
                                       ),
                                       DataCell(
                                         Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children:
-                                          (getUtilDateListGetter(snapshot.data?.docs[index]['cloud_technology'], cloudTechnologyItem)  as List<String>)
+                                          (snapshot.data?.docs[index]['cloud_technology_years'] != null && (snapshot.data?.docs[index]['cloud_technology_years'] as List).isNotEmpty)
+                                              ? (getUtilDateListGetter(snapshot.data?.docs[index]['cloud_technology_years'], yearsCategoryItem)  as List<String>)
                                               .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
-                                              .toList(),
+                                              .toList()
+                                              : [Text(nonData, style: const TextStyle(fontSize: constData.rowItemfontsize))],
                                         ),
                                       ),
-                                      DataCell(
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children:
-                                          (getUtilDateListGetter(snapshot.data?.docs[index]['cloud_technology_years'], yearsCategoryItem)  as List<String>)
-                                              .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
-                                              .toList(),
-                                        ),
-                                      ),
-                                      DataCell(
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children:
-                                          (getUtilDateListGetter(snapshot.data?.docs[index]['cloud_technology'], cloudTechnologyItem)  as List<String>)
-                                              .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
-                                              .toList(),
-                                        ),
-                                      ),
-                                      DataCell(
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children:
-                                          (getUtilDateListGetter(snapshot.data?.docs[index]['cloud_technology_years'], yearsCategoryItem)  as List<String>)
-                                              .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
-                                              .toList(),
-                                        ),
-                                      ),
-                                      DataCell(
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children:
-                                          (getUtilDateListGetter(snapshot.data?.docs[index]['cloud_technology'], cloudTechnologyItem)  as List<String>)
-                                              .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
-                                              .toList(),
-                                        ),
-                                      ),
-                                      DataCell(
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children:
-                                          (getUtilDateListGetter(snapshot.data?.docs[index]['cloud_technology_years'], yearsCategoryItem)  as List<String>)
-                                              .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
-                                              .toList(),
-                                        ),
-                                      ),
+                                          // TODO:後削除　スクロール試しているだけで意味のない列
+                                          DataCell(
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children:
+                                              (snapshot.data?.docs[index]['cloud_technology'] != null && (snapshot.data?.docs[index]['cloud_technology'] as List).isNotEmpty)
+                                                  ? (getUtilDateListGetter(snapshot.data?.docs[index]['cloud_technology'], cloudTechnologyItem)  as List<String>)
+                                                  .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
+                                                  .toList()
+                                                  : [Text(nonData, style: const TextStyle(fontSize: constData.rowItemfontsize))],
+                                            ),
+                                          ),
+                                          DataCell(
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children:
+                                              (snapshot.data?.docs[index]['cloud_technology_years'] != null && (snapshot.data?.docs[index]['cloud_technology_years'] as List).isNotEmpty)
+                                                  ? (getUtilDateListGetter(snapshot.data?.docs[index]['cloud_technology_years'], yearsCategoryItem)  as List<String>)
+                                                  .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
+                                                  .toList()
+                                                  : [Text(nonData, style: const TextStyle(fontSize: constData.rowItemfontsize))],
+                                            ),
+                                          ),
+                                          DataCell(
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children:
+                                              (snapshot.data?.docs[index]['cloud_technology'] != null && (snapshot.data?.docs[index]['cloud_technology'] as List).isNotEmpty)
+                                                  ? (getUtilDateListGetter(snapshot.data?.docs[index]['cloud_technology'], cloudTechnologyItem)  as List<String>)
+                                                  .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
+                                                  .toList()
+                                                  : [Text(nonData, style: const TextStyle(fontSize: constData.rowItemfontsize))],
+                                            ),
+                                          ),
+                                          DataCell(
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children:
+                                              (snapshot.data?.docs[index]['cloud_technology_years'] != null && (snapshot.data?.docs[index]['cloud_technology_years'] as List).isNotEmpty)
+                                                  ? (getUtilDateListGetter(snapshot.data?.docs[index]['cloud_technology_years'], yearsCategoryItem)  as List<String>)
+                                                  .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
+                                                  .toList()
+                                                  : [Text(nonData, style: const TextStyle(fontSize: constData.rowItemfontsize))],
+                                            ),
+                                          ),
+                                          DataCell(
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children:
+                                              (snapshot.data?.docs[index]['cloud_technology'] != null && (snapshot.data?.docs[index]['cloud_technology'] as List).isNotEmpty)
+                                                  ? (getUtilDateListGetter(snapshot.data?.docs[index]['cloud_technology'], cloudTechnologyItem)  as List<String>)
+                                                  .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
+                                                  .toList()
+                                                  : [Text(nonData, style: const TextStyle(fontSize: constData.rowItemfontsize))],
+                                            ),
+                                          ),
+                                          DataCell(
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children:
+                                              (snapshot.data?.docs[index]['cloud_technology_years'] != null && (snapshot.data?.docs[index]['cloud_technology_years'] as List).isNotEmpty)
+                                                  ? (getUtilDateListGetter(snapshot.data?.docs[index]['cloud_technology_years'], yearsCategoryItem)  as List<String>)
+                                                  .map((language) => Text(language.toString(), style: const TextStyle(fontSize: constData.rowItemfontsize)))
+                                                  .toList()
+                                                  : [Text(nonData, style: const TextStyle(fontSize: constData.rowItemfontsize))],
+                                            ),
+                                          ),
                                     ])),
-                              )));
+                              ))
+                          // )
+                          );
                         })),
               ),
             ],
@@ -478,8 +521,10 @@ class _SearchPageState extends State<SearchPage> {
           return codeLanguagesString;
         }
       } else {
+        logger.e("Document does not exist");
       }
     } catch (e) {
+      logger.e("Error getting document: $e");
     }
     return []; // エラーまたはドキュメントが存在しない場合は空のリストを返す
   }
@@ -491,9 +536,19 @@ class _SearchPageState extends State<SearchPage> {
   */
   List<String>? getUtilDateListGetter(List<dynamic> numberList, List<String> utilDataArray) {
     List<String> utilDataListForReturn = [];
+    logger.i("numberList: $numberList");
+    logger.i("utilDataArray: $utilDataArray");
+    if(utilDataArray.isEmpty) {
+      return [];
+    }
 
     for (var item in numberList) {
-      utilDataListForReturn.add(utilDataArray[item]);
+      // utilDataListForReturn.add(utilDataArray[item]);
+      if (item < utilDataArray.length) { // インデックスが範囲内か確認
+        utilDataListForReturn.add(utilDataArray[item]);
+      } else {
+        logger.e("Index out of range: $item"); // 範囲外のインデックスをログに出力
+      }
     }
     return utilDataListForReturn;
   }
