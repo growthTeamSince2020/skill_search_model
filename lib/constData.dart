@@ -4,4 +4,7 @@ class constData{
   static const String searchAgeSelectStringUnder40 = "40歳以下" ;
   static const String searchAgeSelectStringUnder50 = "50歳以下" ;
   static const double rowItemfontsize = 7;
+
+  // コレクション情報定義
+  static const String engineerCollection = "技術者登録";
 }

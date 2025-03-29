@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'constData.dart';
+import 'common/messageManager.dart';
 
 class EngineerRegistrationForm extends StatefulWidget {
   @override
@@ -8,6 +10,8 @@ class EngineerRegistrationForm extends StatefulWidget {
 }
 
 class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
+  // MessageManager のインスタンスを作成
+  final MessageManager messageManager = MessageManager();
   final _formKey = GlobalKey<FormState>();
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
@@ -41,27 +45,30 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
   @override
   void initState() {
     super.initState();
-    _fetchUtilData().then((data) {
-      setState(() {
-        _teamRoles =
-            List<String>.from(data['team_role'] ?? []);
-        _processes = List<String>.from(data['process'] ?? []);
-        _codeLanguages = List<String>.from(data['code_languages'] ?? []);
-        _dbExperience = List<String>.from(data['db_experience'] ?? []);
-        _osExperience = List<String>.from(data['os_experience'] ?? []);
-        _cloudTech = List<String>.from(data['cloud_technology'] ?? []);
-        _tool = List<String>.from(data['tool'] ?? []);
-        _experienceCategories =
-            List<String>.from(data['experience_category'] ?? []);
-        _yearsCategories = List<String>.from(data['years_category'] ?? []);
+    // MessageManager を初期化してメッセージを読み込む
+    messageManager.loadMessages(assetPath: 'assets/messages.json').then((_) {
+      _fetchUtilData().then((data) {
+        setState(() {
+          _teamRoles =
+          List<String>.from(data['team_role'] ?? []);
+          _processes = List<String>.from(data['process'] ?? []);
+          _codeLanguages = List<String>.from(data['code_languages'] ?? []);
+          _dbExperience = List<String>.from(data['db_experience'] ?? []);
+          _osExperience = List<String>.from(data['os_experience'] ?? []);
+          _cloudTech = List<String>.from(data['cloud_technology'] ?? []);
+          _tool = List<String>.from(data['tool'] ?? []);
+          _experienceCategories =
+          List<String>.from(data['experience_category'] ?? []);
+          _yearsCategories = List<String>.from(data['years_category'] ?? []);
 
-        _teamRolesChecked.clear();
-        _processesChecked.clear();
-        _codeLanguagesChecked.clear();
-        _dbExperienceChecked.clear();
-        _osExperienceChecked.clear();
-        _cloudTechChecked.clear();
-        _toolChecked.clear();
+          _teamRolesChecked.clear();
+          _processesChecked.clear();
+          _codeLanguagesChecked.clear();
+          _dbExperienceChecked.clear();
+          _osExperienceChecked.clear();
+          _cloudTechChecked.clear();
+          _toolChecked.clear();
+        });
       });
     });
   }
@@ -83,11 +90,10 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
 
   Future<Map<String, dynamic>> _fetchUtilData() async {
     try {
-      final docTeamRole =
-          await FirebaseFirestore.instance // Add fetching for team_role
-              .collection('utilData')
-              .doc('team_role_item')
-              .get();
+      final docTeamRole = await FirebaseFirestore.instance
+          .collection('utilData') // コレクション名修正
+          .doc('team_role_item')
+          .get();
       final docProcess = await FirebaseFirestore.instance
           .collection('utilData')
           .doc('process_item')
@@ -130,22 +136,21 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
           docOsExperience.exists &&
           docCloudTech.exists &&
           docTool.exists) {
-        // Add check for docTeamRole
         return {
           'team_role': docTeamRole.data()!['team_role'] as List<dynamic>,
           'process': docProcess.data()!['process'] as List<dynamic>,
           'code_languages':
-              docCodeLanguages.data()!['code_languages'] as List<dynamic>,
-          'experience_category': docExperienceCategory
-              .data()!['experience_category'] as List<dynamic>,
+          docCodeLanguages.data()!['code_languages'] as List<dynamic>,
+          'experience_category':
+          docExperienceCategory.data()!['experience_category'] as List<dynamic>,
           'years_category':
-              docYearsCategory.data()!['years_category'] as List<dynamic>,
+          docYearsCategory.data()!['years_category'] as List<dynamic>,
           'db_experience':
-              docDbExperience.data()!['db_experience'] as List<dynamic>,
+          docDbExperience.data()!['db_experience'] as List<dynamic>,
           'os_experience':
-              docOsExperience.data()!['os_experience'] as List<dynamic>,
+          docOsExperience.data()!['os_experience'] as List<dynamic>,
           'cloud_technology':
-              docCloudTech.data()!['cloud_technology'] as List<dynamic>,
+          docCloudTech.data()!['cloud_technology'] as List<dynamic>,
           'tool': docTool.data()!['tool'] as List<dynamic>,
         };
       } else {
@@ -153,11 +158,16 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
       }
     } catch (e) {
       print('データの取得に失敗しました: $e');
-      return {};
+      return {
+
+      };
     }
   }
 
   Future<void> _registerEngineer() async {
+    // メソッド開始のログを出力
+    messageManager.info("1000I",constData.engineerCollection);
+
     // エラーチェック用の関数を定義
     List<String> _checkRadioButtons() {
       //エラーリストを初期化
@@ -205,13 +215,16 @@ class _EngineerRegistrationFormState extends State<EngineerRegistrationForm> {
       //ラジオボタンが未選択の状態で登録ボタン押した場合
       List<String> errors = _checkRadioButtons();
       if (errors.isNotEmpty) {
-        String errorMessage = '${errors.join('\n')} の経験年数を選択してください';
+        // 各エラー項目に対応するメッセージを生成
+        List<String> errorMessages = errors.map((error) => messageManager.getMessage("2001E", [error])).toList();
+        // メッセージを改行で連結
+        String combinedErrorMessage = errorMessages.join('\n');
         showDialog(
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
               title: Text('入力エラー'),
-              content: Text(errorMessage),
+              content: Text(combinedErrorMessage),
               actions: <Widget>[
                 TextButton(
                   child: Text('OK'),
