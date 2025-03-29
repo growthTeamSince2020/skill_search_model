@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:skill_search_model/search.dart';
 
 import 'engineerRegistrationForm.dart';
-import 'firebase_options.dart';
+import 'common/firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
