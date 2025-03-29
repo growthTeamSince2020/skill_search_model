@@ -144,7 +144,7 @@ class _SearchPageState extends State<SearchPage> {
                 child: const Text('登録'),
                 onPressed: () {
                   setState(() {
-                    for (int i = 4; i < 25; i++) {
+                    for (int i = 4; i < 30; i++) {
                       addUser(
                         i,
                         '太郎',
@@ -199,8 +199,8 @@ class _SearchPageState extends State<SearchPage> {
             ],
           ),
           const SizedBox(height: 10),
-          Flexible(
-
+          SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
         child: StreamBuilder<QuerySnapshot>(
             stream: getStream(),
             builder: (BuildContext context,
