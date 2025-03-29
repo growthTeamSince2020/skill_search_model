@@ -2,14 +2,13 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
-import 'package:skill_search_model/constData.dart';
+import 'package:skill_search_model/common/constData.dart';
 
 class SearchPage extends StatefulWidget {
   @override
   _SearchPageState createState() => _SearchPageState();
 
   dispose() {
-    // TODO: implement dispose
     throw UnimplementedError();
   }
 }
