@@ -42,6 +42,7 @@ class _SearchPageState extends State<SearchPage> {
   final ScrollController verticalController = ScrollController(); // 垂直スクロール用コントローラ
   // bool _isCheckedOne = false;
   final designSize = Size(360, 690);
+  int totalCount = 0;
 
 
   @override
@@ -53,6 +54,7 @@ class _SearchPageState extends State<SearchPage> {
   void initState() {
     super.initState();
     _fetchData(); // 別メソッドで非同期処理を実行
+
   }
 
   @override
@@ -65,9 +67,12 @@ class _SearchPageState extends State<SearchPage> {
           Column(
             children: [
               const Text(constData.engineerSearch,style: TextStyle(color: Colors.white),),
-              const Text(constData.engineerSearchNumber+constData.space+"10"+constData.engineerSearchKen,style: TextStyle(color: Colors.white,fontSize:15),),
+              Text(constData.engineerSearchNumber+constData.space+totalCount.toString()+constData.engineerSearchKen,style: const TextStyle(color: Colors.white,fontSize:15),),
             ],
           ),
+          actions: [Container(
+              margin: const EdgeInsets.only(right: 40),
+              child: Icon(Icons.search,size: 30,)),]
         ),
         body: StreamBuilder<QuerySnapshot>(
           stream: getStream(),
@@ -89,35 +94,96 @@ class _SearchPageState extends State<SearchPage> {
                   color: Colors.white,
                   shadowColor: Colors.black,
                   child: ListTile(
+                    iconColor: Colors.grey,
                     title: Text(snapshot.data
                         ?.docs[index]['last_name'] +
                         snapshot.data?.docs[index]
-                        ['first_name']),
+                        ['first_name'],style: const TextStyle(fontSize: 20),),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         //最寄駅
-                        Text('最寄駅 '+snapshot
-                            .data?.docs[index][
-                        'nearest_station_line_name'] +
-                            snapshot.data?.docs[index]
-                            ['nearest_station_name']+'駅'),
+                        Row(
+                          children: [
+                            const Icon(Icons.linear_scale),
+                            Container(
+                                margin: const EdgeInsets.all(3),
+                             decoration: BoxDecoration(
+                               borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.blue),
+                             ),
+                                child: const Text(constData.space+constData.engineerSearchStation1+constData.space)),
+                            Text(constData.space+snapshot
+                                .data?.docs[index][
+                            'nearest_station_line_name'] +constData.space+
+                                snapshot.data?.docs[index]
+                                ['nearest_station_name']+'駅'),
+                          ],
+                        ),
+                        //チーム役割
+                        Row(
+                          children: [
+                            const Icon(Icons.group),
+                            Container(
+                                margin: const EdgeInsets.all(3),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.blue),),
+                                child: const Text(constData.space+constData.engineerSearchTeamRole1+constData.space)),
+                            Text(constData.space
+                                + getUtilDateListGetterSimpleEvaluation(snapshot.data?.docs[index]['team_role'],
+                                    teamRoleItem,snapshot.data?.docs[index]['team_role_years'],false).toString()),
+                          ],
+                        ),
+                        //工程経験
+                        Row(
+                          children: [
+                            const Icon(Icons.account_tree),
+                            Container(
+                                margin: const EdgeInsets.all(3),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.blue),),
+                                child: const Text(constData.space+constData.engineerSearchProcess1+constData.space)),
+                            Text(constData.space
+                                + getUtilDateListGetterSimpleEvaluation(snapshot.data?.docs[index]['process'],
+                                    processItem,snapshot.data?.docs[index]['process_experience'],true).toString()),
+                          ],
+                        ),
                         //経験言語
-                        Text(constData.engineerSearchCodeLanguages1 + constData.space
-                        + getUtilDateListGetterSimpleEvaluation(snapshot.data?.docs[index]['code_languages'],
-                                codeLanguagesItem,snapshot.data?.docs[index]['code_languages_years'],false).toString()),
-                        //言語経験
-                        Text(constData.engineerSearchProcess1 + constData.space
-                            + getUtilDateListGetterSimpleEvaluation(snapshot.data?.docs[index]['process'],
-                                processItem,snapshot.data?.docs[index]['process_experience'],true).toString()),
-                        //言語経験
-                        // Text(),
-                        //言語経験
-                        // Text(),
+                        Row(
+                          children: [
+                            const Icon(Icons.developer_mode),
+                            Container(
+                                margin: const EdgeInsets.all(3),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.blue),),
+                                child: const Text(constData.space+constData.engineerSearchCodeLanguages1+constData.space)),
+                            Text(constData.space
+                                + getUtilDateListGetterSimpleEvaluation(snapshot.data?.docs[index]['code_languages'],
+                                    codeLanguagesItem,snapshot.data?.docs[index]['code_languages_years'],false).toString()),
+                          ],
+                        ),
+                        //DB言語
+                        Row(
+                          children: [
+                            const Icon(Icons.storage),
+                            Container(
+                                margin: const EdgeInsets.all(3),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.blue),),
+                                child: const Text(constData.space+constData.engineerSearchDb1+constData.space)),
+                            Text(constData.space
+                                + getUtilDateListGetterSimpleEvaluation(snapshot.data?.docs[index]['db_experience'],
+                                    dbExperienceItem,snapshot.data?.docs[index]['db_experience_years'],false).toString()),
+                          ],
+                        ),
                       ],
                     ),
                     leading: const Icon(Icons.account_circle),
-                    trailing: Text("TeamLeader ※準備中　その人の立居とかレベルを示したい"),
+                    trailing: Text("詳細ボタンを実装予定"),
 
                     onTap: () {
                       print('タップされました');
@@ -180,7 +246,9 @@ class _SearchPageState extends State<SearchPage> {
     List<String> yearsCategoryItemResult = await getStringListFromFirestore(
         "utilData", "years_category_item", "years_category", false); //ツール取得リスト
 
+
     setState(() {
+      totalCount = codeLanguagesResult.length;
       codeLanguagesSelectItem = codeLanguagesSelectItemsResult; //言語選択プルダウン
       codeLanguagesItem = codeLanguagesResult; //言語リスト
       processItem = processItemResult; //工程取得リスト
@@ -207,7 +275,7 @@ class _SearchPageState extends State<SearchPage> {
     try {
       final doc = await docRef.get();
       if (doc.exists) {
-        final data = doc.data() as Map<String, dynamic>?;
+        final data = doc.data();
 
         if (data != null) {
           // 'code_languages'フィールドの値を取得
@@ -240,10 +308,11 @@ class _SearchPageState extends State<SearchPage> {
     String simpleEvaluationWord;
 
     List<String> utilDataListForReturn = [];
-    //logger.i("numberList: $numberList");
-    //logger.i("utilDataArray: $utilDataArray");
-    if (utilDataArray.isEmpty) {
-      return [];
+    logger.i("numberList: $numberList");
+    logger.i("utilDataArray: $utilDataArray");
+    logger.i("numberList2: $numberList2");
+    if (utilDataArray.isEmpty || numberList.isEmpty || numberList2.isEmpty ||numberList.length!=numberList2.length) {
+      return ["No Data"];
     }
 
     for(int i=0;i<numberList.length;i++){
