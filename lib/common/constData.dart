@@ -25,15 +25,16 @@ class constData{
   static const String noExperience = "経験無";
 
   /* 検索画面 */
+  static const String engineerSearchNumber  = "検索件数";
+  static const String engineerSearchKen  = "件";
   static const String engineerSearchStation1  = "最寄駅";
   static const String engineerSearchStation2 = "駅";
   static const String engineerSearchCodeLanguages1  = "経験言語";
   static const String engineerSearchProcess1  = "工程経験";
   static const String engineerSearchDb1  = "DB経験";
+  static const String engineerSearchTeamRole1  = "チーム役割経験";
   static const String engineerSearchOs1  = "OS経験";
   static const String engineerSearchCloud1  = "クラウド技術";
   static const String engineerSearchTool1  = "ツール経験";
-
-
 
 }
