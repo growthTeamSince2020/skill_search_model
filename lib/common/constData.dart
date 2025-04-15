@@ -19,11 +19,14 @@ class constData{
   static const String slash= "/";
   static const String space = " ";
   static const String comma = ",";
+  static const String rightBracket = "(";
+  static const String leftBracket = ")";
   static const String triangle= "△";//experience_categoryで1以下、years_categoryで1以下
   static const String circle= "○";//experience_categoryで2、years_categoryで2or3以下
   static const String doubleCircle= "◎";//experience_categoryで３、years_categoryで４以上
   static const String experienced = "経験有";
   static const String noExperience = "経験無";
+  static const String age = "歳";
 
   /* 検索画面 */
   static const String engineerSearchNumber  = "検索件数";

@@ -83,23 +83,38 @@ class _SearchPageState extends State<SearchPage> {
 
     return Scaffold(
         appBar: AppBar(
-          backgroundColor: Colors.green,
-          title:
-          Row(
-            children: [
-              Container(
-                  margin: const EdgeInsets.only(right: 10),
-                  child: Icon(Icons.pageview,color: Colors.white,)),
-              Container(
-                  margin: const EdgeInsets.only(right: 10),
-                  child: const Text(constData.engineerSearch,style: TextStyle(color: Colors.white),)),
-              Text(constData.engineerSearchNumber+constData.space+totalCount.toString()+constData.engineerSearchKen,style: const TextStyle(color: Colors.white,fontSize:15),),
-            ],
+            backgroundColor: Colors.green,
+            iconTheme: const IconThemeData(color: Colors.white),
+              title:
+              new Flexible(
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                          margin: const EdgeInsets.only(right: 10),
+                          child: Icon(Icons.pageview,color: Colors.white,)),
+                      Container(
+                          margin: const EdgeInsets.only(right: 10),
+                          child: const Text(constData.engineerSearch,style: TextStyle(color: Colors.white),)),
+                      Container(
+                          margin: const EdgeInsets.only(right: 15),
+                          child: Text(constData.engineerSearchNumber+constData.space+totalCount.toString()+constData.engineerSearchKen,style: const TextStyle(color: Colors.white,fontSize:15),)),
+
+                    ],
+                  ),
+                  Container(
+                      margin: const EdgeInsets.only(left: 10),
+                      alignment: Alignment.centerLeft,
+                      child: Text("△：未経験から2年未満　○：3年から5年未満　◎：5年以上",style: const TextStyle(color: Colors.white,fontSize:12),)),
+                ],
+              ),
+            ),
+            actions: [Container(
+                margin: const EdgeInsets.only(right: 40),
+                child: IconButton(onPressed: () => _detailSearchScreen(), icon: const Icon(Icons.filter_list_alt,size: 30, color: Colors.white,)),),]
           ),
-          actions: [Container(
-              margin: const EdgeInsets.only(right: 40),
-              child: IconButton(onPressed: () => _detailSearchScreen(), icon: const Icon(Icons.filter_list_alt,size: 30, color: Colors.white,)),),]
-        ),
+
         body: StreamBuilder<QuerySnapshot>(
           stream: getStream(),
           builder: (BuildContext context,
@@ -124,7 +139,8 @@ class _SearchPageState extends State<SearchPage> {
                     title: Text(snapshot.data
                         ?.docs[index]['last_name'] +
                         snapshot.data?.docs[index]
-                        ['first_name'],style: const TextStyle(fontSize: 20),),
+                        ['first_name'] + constData.space + constData.rightBracket + snapshot.data?.docs[index]
+                    ['age'].toString() +constData.age + constData.leftBracket ,style: const TextStyle(fontSize: 20),),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

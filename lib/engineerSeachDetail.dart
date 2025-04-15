@@ -19,6 +19,7 @@ class _EngineerSeachDetailPageState extends State<EngineerSeachDetailPage> {
     return Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.lime.shade700,
+          iconTheme: IconThemeData(color: Colors.white),
           title: Row(
             children: [
               Container(
