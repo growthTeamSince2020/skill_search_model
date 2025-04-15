@@ -7,7 +7,8 @@ class constData{
 
   // コレクション情報定義
   static const String engineerCollection = "技術者登録";
-  static const String engineerSearch = "技術者検索";
+  static const String engineerSearch = "技術者検索一覧";
+  static const String engineerSearchDitail = "技術者詳細検索";
   static const String engineerDetail = "技術者詳細";
 
   ///画面使用文言

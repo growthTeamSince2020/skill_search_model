@@ -3,6 +3,8 @@ import 'package:flutter/rendering.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:logger/logger.dart';
 import 'package:skill_search_model/common/constData.dart';
+import 'package:skill_search_model/engineerSeachDetail.dart';
+import 'package:skill_search_model/seachDetail.dart';
 import 'dart:async';
 
 
@@ -44,6 +46,25 @@ class _SearchPageState extends State<SearchPage> {
   final designSize = Size(360, 690);
   int totalCount = 0;
 
+  //詳細検索アイコン押下時
+  void _detailSearchScreen() {
+    Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => const SeachDetailPage(),
+      ),
+    );
+  }
+
+  //エンジニア詳細ボタン押下時
+  void _engineerDetailScreen() {
+    Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => const EngineerSeachDetailPage(),
+      ),
+    );
+  }
 
   @override
   void dispose() {
@@ -64,15 +85,20 @@ class _SearchPageState extends State<SearchPage> {
         appBar: AppBar(
           backgroundColor: Colors.green,
           title:
-          Column(
+          Row(
             children: [
-              const Text(constData.engineerSearch,style: TextStyle(color: Colors.white),),
+              Container(
+                  margin: const EdgeInsets.only(right: 10),
+                  child: Icon(Icons.pageview,color: Colors.white,)),
+              Container(
+                  margin: const EdgeInsets.only(right: 10),
+                  child: const Text(constData.engineerSearch,style: TextStyle(color: Colors.white),)),
               Text(constData.engineerSearchNumber+constData.space+totalCount.toString()+constData.engineerSearchKen,style: const TextStyle(color: Colors.white,fontSize:15),),
             ],
           ),
           actions: [Container(
               margin: const EdgeInsets.only(right: 40),
-              child: Icon(Icons.search,size: 30,)),]
+              child: IconButton(onPressed: () => _detailSearchScreen(), icon: const Icon(Icons.filter_list_alt,size: 30, color: Colors.white,)),),]
         ),
         body: StreamBuilder<QuerySnapshot>(
           stream: getStream(),
@@ -113,11 +139,13 @@ class _SearchPageState extends State<SearchPage> {
                                 border: Border.all(color: Colors.blue),
                              ),
                                 child: const Text(constData.space+constData.engineerSearchStation1+constData.space)),
-                            Text(constData.space+snapshot
-                                .data?.docs[index][
-                            'nearest_station_line_name'] +constData.space+
-                                snapshot.data?.docs[index]
-                                ['nearest_station_name']+'駅'),
+                            new Flexible(
+                              child: Text(constData.space+snapshot
+                                  .data?.docs[index][
+                              'nearest_station_line_name'] +constData.space+
+                                  snapshot.data?.docs[index]
+                                  ['nearest_station_name']+'駅'),
+                            ),
                           ],
                         ),
                         //チーム役割
@@ -130,9 +158,11 @@ class _SearchPageState extends State<SearchPage> {
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(color: Colors.blue),),
                                 child: const Text(constData.space+constData.engineerSearchTeamRole1+constData.space)),
-                            Text(constData.space
-                                + getUtilDateListGetterSimpleEvaluation(snapshot.data?.docs[index]['team_role'],
-                                    teamRoleItem,snapshot.data?.docs[index]['team_role_years'],false).toString()),
+                            new Flexible(
+                              child: Text(constData.space
+                                  + getUtilDateListGetterSimpleEvaluation(snapshot.data?.docs[index]['team_role'],
+                                      teamRoleItem,snapshot.data?.docs[index]['team_role_years'],false).toString()),
+                            ),
                           ],
                         ),
                         //工程経験
@@ -145,9 +175,11 @@ class _SearchPageState extends State<SearchPage> {
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(color: Colors.blue),),
                                 child: const Text(constData.space+constData.engineerSearchProcess1+constData.space)),
-                            Text(constData.space
-                                + getUtilDateListGetterSimpleEvaluation(snapshot.data?.docs[index]['process'],
-                                    processItem,snapshot.data?.docs[index]['process_experience'],true).toString()),
+                            new Flexible(
+                              child: Text(constData.space
+                                  + getUtilDateListGetterSimpleEvaluation(snapshot.data?.docs[index]['process'],
+                                      processItem,snapshot.data?.docs[index]['process_experience'],true).toString()),
+                            ),
                           ],
                         ),
                         //経験言語
@@ -160,9 +192,11 @@ class _SearchPageState extends State<SearchPage> {
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(color: Colors.blue),),
                                 child: const Text(constData.space+constData.engineerSearchCodeLanguages1+constData.space)),
-                            Text(constData.space
-                                + getUtilDateListGetterSimpleEvaluation(snapshot.data?.docs[index]['code_languages'],
-                                    codeLanguagesItem,snapshot.data?.docs[index]['code_languages_years'],false).toString()),
+                            new Flexible(
+                              child: Text(constData.space
+                                  + getUtilDateListGetterSimpleEvaluation(snapshot.data?.docs[index]['code_languages'],
+                                      codeLanguagesItem,snapshot.data?.docs[index]['code_languages_years'],false).toString()),
+                            ),
                           ],
                         ),
                         //DB言語
@@ -175,15 +209,17 @@ class _SearchPageState extends State<SearchPage> {
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(color: Colors.blue),),
                                 child: const Text(constData.space+constData.engineerSearchDb1+constData.space)),
-                            Text(constData.space
-                                + getUtilDateListGetterSimpleEvaluation(snapshot.data?.docs[index]['db_experience'],
-                                    dbExperienceItem,snapshot.data?.docs[index]['db_experience_years'],false).toString()),
+                            new Flexible(
+                              child: Text(constData.space
+                                  + getUtilDateListGetterSimpleEvaluation(snapshot.data?.docs[index]['db_experience'],
+                                      dbExperienceItem,snapshot.data?.docs[index]['db_experience_years'],false).toString()),
+                            ),
                           ],
                         ),
                       ],
                     ),
                     leading: const Icon(Icons.account_circle),
-                    trailing: Text("詳細ボタンを実装予定"),
+                    trailing: IconButton(onPressed: () => _engineerDetailScreen(), icon: const Icon(Icons.article,size: 30,)),
 
                     onTap: () {
                       print('タップされました');
