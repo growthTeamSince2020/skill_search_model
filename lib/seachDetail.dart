@@ -33,6 +33,23 @@ class _SeachDetailPageState extends State<SeachDetailPage> {
   final Map<String, String?> _cloudTechChecked = {};
   final Map<String, String?> _toolChecked = {};
 
+  //工程取得リスト
+  List<List<bool>> processSearchItemChecked
+  = [[false,false,false,false,false,false], //要件定義
+  [false,false,false,false,false,false], //基本設計
+  [false,false,false,false,false,false], //詳細設計
+  [false,false,false,false,false,false], //コーディング
+  [false,false,false,false,false,false], //単体
+  [false,false,false,false,false,false], //結合
+  [false,false,false,false,false,false]]; //保守
+
+  // List<String> teamRoleSearchItem; //チーム役割取得リスト
+  // List<String> codeLanguagesSearchItem; //経験言語取得リスト
+  // List<String> dbExperienceSearchItem; //DB取得リスト
+  // List<String> osExperienceSearchItem; //OS取得リスト
+  // List<String> cloudTechnologySearchItem; //クラウド取得リスト
+  // List<String> toolSearchItem; //ツール取得リスト
+
   @override
   void initState() {
     super.initState();
@@ -201,22 +218,15 @@ class _SeachDetailPageState extends State<SeachDetailPage> {
                         child: Wrap(
                           spacing: 8.0,
                           children: _yearsCategories.map((yearsCategory) {
-                            return RadioListTile<String>(
-                              title: Padding(
-                                padding:
-                                const EdgeInsets.only(left: 16.0 * 4),
-                                child: Text(yearsCategory),
-                              ),
-                              value: yearsCategory,
-                              groupValue: _teamRolesChecked[teamRoles],
+                            return CheckboxListTile(
+                              title: Text(yearsCategory),
+                              value: false,
                               onChanged: (value) {
                                 setState(() {
-                                  _teamRolesChecked[teamRoles] = value;
                                 });
                               },
+                              controlAffinity: ListTileControlAffinity.leading,
                               contentPadding: EdgeInsets.zero,
-                              controlAffinity:
-                              ListTileControlAffinity.trailing,
                             );
                           }).toList(),
                         ),
@@ -635,7 +645,7 @@ class _SeachDetailPageState extends State<SeachDetailPage> {
           ),
           ElevatedButton(
             onPressed: _registerEngineer,
-            child: Text('検索実行'),
+            child: Text('検索'),
           ),
         ],
     ));
