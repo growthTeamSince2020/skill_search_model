@@ -7,11 +7,14 @@ import 'package:skill_search_model/engineerSeachDetail.dart';
 import 'package:skill_search_model/seachDetail.dart';
 import 'dart:async';
 
+import 'package:skill_search_model/searchConditionsDto.dart';
+
 
 /// Example without a datasource
 class SearchPage extends StatefulWidget {
   @override
   _SearchPageState createState() => _SearchPageState();
+
 }
 
 class _SearchPageState extends State<SearchPage> {
@@ -45,14 +48,15 @@ class _SearchPageState extends State<SearchPage> {
   // bool _isCheckedOne = false;
   final designSize = Size(360, 690);
   int totalCount = 0;
+  final searchConditionsDto searchConditions = searchConditionsDto();
 
   //詳細検索アイコン押下時
   void _detailSearchScreen() {
     Navigator.push<void>(
       context,
       MaterialPageRoute<void>(
-        builder: (BuildContext context) => const SeachDetailPage(),
-      ),
+        builder: (BuildContext context) => SeachDetailPage(),
+        ),
     );
   }
 
@@ -254,14 +258,30 @@ class _SearchPageState extends State<SearchPage> {
    * @return なし
   */
   Stream<QuerySnapshot> getStream() {
+
     // 検索条件を元にクエリを作成
     Query query = engineer;
-    if (codeLanguagesDropdownSelectedValue.isNotEmpty) {
-      query = query.where(
-          "code_languages", isEqualTo: codeLanguagesDropdownSelectedValue);
-    }
-    if (ageDropdownSelectedValue != 0) {
-      query = query.where("age", isLessThanOrEqualTo: ageDropdownSelectedValue);
+    //編集フラグがNullの場合、初期化
+    if(searchConditionsDto().getSearchSettingFlag == null){
+      searchConditionsDto().setSearchSettingFlag = false;
+    //編集フラグがtrueの場合、検索
+    }else if(searchConditionsDto().getSearchSettingFlag == true){
+      if (codeLanguagesDropdownSelectedValue.isNotEmpty) {
+        query = query.where(
+            "code_languages", isEqualTo: codeLanguagesDropdownSelectedValue);
+      }
+      if (searchConditionsDto().getAgeDropdownSelectedValue! > 0) {
+        int searchNum = 0;
+        logger.i("ageDropdownSelectedValue: ${searchConditionsDto().getAgeDropdownSelectedValue}");
+        if(searchConditionsDto().getAgeDropdownSelectedValue == 1){
+          searchNum = 30;
+        }else if(searchConditionsDto().getAgeDropdownSelectedValue == 2){
+          searchNum = 40;
+        }else if(searchConditionsDto().getAgeDropdownSelectedValue == 3){
+          searchNum = 50;
+        }
+        query = query.where("age", isLessThanOrEqualTo: searchNum);
+      }
     }
     return query.snapshots();
   }
@@ -360,9 +380,9 @@ class _SearchPageState extends State<SearchPage> {
     String simpleEvaluationWord;
 
     List<String> utilDataListForReturn = [];
-    logger.i("numberList: $numberList");
-    logger.i("utilDataArray: $utilDataArray");
-    logger.i("numberList2: $numberList2");
+    // logger.i("numberList: $numberList");
+    // logger.i("utilDataArray: $utilDataArray");
+    // logger.i("numberList2: $numberList2");
     if (utilDataArray.isEmpty || numberList.isEmpty || numberList2.isEmpty ||numberList.length!=numberList2.length) {
       return ["No Data"];
     }
@@ -388,14 +408,6 @@ class _SearchPageState extends State<SearchPage> {
 
     }
 
-    // for (var item in numberList) {
-    //   // utilDataListForReturn.add(utilDataArray[item]);
-    //   if (item < utilDataArray.length) { // インデックスが範囲内か確認
-    //     utilDataListForReturn.add(utilDataArray[item]);
-    //   } else {
-    //     logger.e("Index out of range: $item"); // 範囲外のインデックスをログに出力
-    //   }
-    // }
     return utilDataListForReturn;
   }
 

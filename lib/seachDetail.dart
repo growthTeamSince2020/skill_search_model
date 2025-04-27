@@ -16,6 +16,9 @@ class SeachDetailPage extends StatefulWidget {
 }
 
 class _SeachDetailPageState extends State<SeachDetailPage> {
+
+
+
   final logger = Logger(); //ロガーの宣言
   //編集フラグ
   List<String> _teamRoles = []; // Changed to _teamRoles for clarity
@@ -27,6 +30,12 @@ class _SeachDetailPageState extends State<SeachDetailPage> {
   List<String> _tool = [];
   List<String> _experienceCategories = [];
   List<String> _yearsCategories = [];
+  List<String> _ageList = [
+    "条件を指定しない",
+    constData.searchAgeSelectStringUnder30,
+    constData.searchAgeSelectStringUnder40,
+    constData.searchAgeSelectStringUnder50
+  ];
 
   final Map<String, String?> _teamRolesChecked = {};
   final Map<String, String?> _processesChecked = {};
@@ -35,6 +44,7 @@ class _SeachDetailPageState extends State<SeachDetailPage> {
   final Map<String, String?> _osExperienceChecked = {};
   final Map<String, String?> _cloudTechChecked = {};
   final Map<String, String?> _toolChecked = {};
+  int? _ageChecked;
 
   //工程取得リスト
   List<List<bool>> _processSearchItemChecked
@@ -45,6 +55,8 @@ class _SeachDetailPageState extends State<SeachDetailPage> {
   [false,false,false,false], //単体
   [false,false,false,false], //結合
   [false,false,false,false]]; //保守
+  //年齢
+  int? _ageSearchItemChecked;
 
   // List<String> teamRoleSearchItem; //チーム役割取得リスト
   // List<String> codeLanguagesSearchItem; //経験言語取得リスト
@@ -56,6 +68,10 @@ class _SeachDetailPageState extends State<SeachDetailPage> {
   @override
   void initState() {
     super.initState();
+
+    if(_ageChecked == null){
+      _ageChecked = 0;
+    }
 
     //編集フラグがNullの場合、初期化
     if(searchConditionsDto().getSearchSettingFlag == null){
@@ -86,9 +102,12 @@ class _SeachDetailPageState extends State<SeachDetailPage> {
     });
   }
 
-  void _registerEngineer(){
-    //checkboxnにチェック付いているものがあるかチェックして編集フラグを更新
-    for(var item in _processSearchItemChecked){
+  void _searchEngineer(){
+    //checkboxにチェック付いているものがあるかチェックして編集フラグを更新
+    if(_ageChecked! > 0){//年齢
+      searchConditionsDto().setSearchSettingFlag = true;
+    }
+    for(var item in _processSearchItemChecked){//工程
       if(item.any((value) => value == true)){
         searchConditionsDto().setSearchSettingFlag = true;
         break;
@@ -199,6 +218,48 @@ class _SeachDetailPageState extends State<SeachDetailPage> {
       ),
       body: ListView(
         children: <Widget>[
+          Container(
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: Colors.grey,
+                  width: 1.0,
+                ),
+              ),
+            ),
+            child: ExpansionTile(
+              title: Row(
+                children: [
+                  Icon(Icons.group), // ここに表示したいアイコンを指定します
+                  SizedBox(width: 8), // アイコンとテキストの間にスペースを追加
+                  Text("年齢"),
+                ],
+              ),
+              childrenPadding: EdgeInsets.only(left: 16.0, bottom: 16.0),
+              children: _ageList.map((ageKey) {
+                return
+                RadioListTile<String>(
+                  title: Padding(
+                    padding:
+                    const EdgeInsets.only(left: 16.0 * 4),
+                    child: Text(ageKey),
+                  ),
+                  value: ageKey,
+                  groupValue: _ageList[_ageChecked!],
+                  onChanged: (value) {
+                    setState(() {
+                      logger.i('value: ${_ageList.indexOf(value!)}');
+                      _ageChecked =_ageList.indexOf(value!);
+                    });
+                  },
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity:
+                  ListTileControlAffinity.trailing,
+                );
+              }).toList(),
+
+            ),
+          ),
           Container(
             decoration: BoxDecoration(
               border: Border(
@@ -665,7 +726,7 @@ class _SeachDetailPageState extends State<SeachDetailPage> {
             ),
           ),
           ElevatedButton(
-            onPressed: _registerEngineer,
+            onPressed: _searchEngineer,
             child: Text('検索'),
           ),
         ],

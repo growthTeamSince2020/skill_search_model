@@ -13,6 +13,15 @@ class searchConditionsDto{
   // getter
   bool? get getSearchSettingFlag => _searchSettingFlag;
 
+  ///年齢選択条件値
+  int? _ageDropdownSelectedValue;
+  // setter
+  set setAgeDropdownSelectedValue(int? newValue) {
+    _ageDropdownSelectedValue = newValue;
+    logger.i('ageDropdownSelectedValue が更新されました: $_ageDropdownSelectedValue');
+  }
+  int? get getAgeDropdownSelectedValue => _ageDropdownSelectedValue;
+
   /// 工程取得リスト
   List<List<bool>>? _processSearchItemChecked;
   // setter 工程取得リスト
