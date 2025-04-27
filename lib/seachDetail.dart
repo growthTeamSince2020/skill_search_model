@@ -5,6 +5,7 @@ import 'package:logger/logger.dart';
 import 'package:skill_search_model/common/constData.dart';
 import 'dart:async';
 import 'package:skill_search_model/search.dart';
+import 'package:skill_search_model/searchConditionsDto.dart';
 
 
 class SeachDetailPage extends StatefulWidget {
@@ -15,6 +16,8 @@ class SeachDetailPage extends StatefulWidget {
 }
 
 class _SeachDetailPageState extends State<SeachDetailPage> {
+  final logger = Logger(); //ロガーの宣言
+  //編集フラグ
   List<String> _teamRoles = []; // Changed to _teamRoles for clarity
   List<String> _processes = [];
   List<String> _codeLanguages = [];
@@ -34,14 +37,14 @@ class _SeachDetailPageState extends State<SeachDetailPage> {
   final Map<String, String?> _toolChecked = {};
 
   //工程取得リスト
-  List<List<bool>> processSearchItemChecked
-  = [[false,false,false,false,false,false], //要件定義
-  [false,false,false,false,false,false], //基本設計
-  [false,false,false,false,false,false], //詳細設計
-  [false,false,false,false,false,false], //コーディング
-  [false,false,false,false,false,false], //単体
-  [false,false,false,false,false,false], //結合
-  [false,false,false,false,false,false]]; //保守
+  List<List<bool>> _processSearchItemChecked
+  = [[false,false,false,false], //要件定義
+  [false,false,false,false], //基本設計
+  [false,false,false,false], //詳細設計
+  [false,false,false,false], //コーディング
+  [false,false,false,false], //単体
+  [false,false,false,false], //結合
+  [false,false,false,false]]; //保守
 
   // List<String> teamRoleSearchItem; //チーム役割取得リスト
   // List<String> codeLanguagesSearchItem; //経験言語取得リスト
@@ -53,6 +56,11 @@ class _SeachDetailPageState extends State<SeachDetailPage> {
   @override
   void initState() {
     super.initState();
+
+    //編集フラグがNullの場合、初期化
+    if(searchConditionsDto().getSearchSettingFlag == null){
+      searchConditionsDto().setSearchSettingFlag = false;
+    }
     _fetchUtilData().then((data) {
       setState(() {
         _teamRoles =
@@ -79,6 +87,19 @@ class _SeachDetailPageState extends State<SeachDetailPage> {
   }
 
   void _registerEngineer(){
+    //checkboxnにチェック付いているものがあるかチェックして編集フラグを更新
+    for(var item in _processSearchItemChecked){
+      if(item.any((value) => value == true)){
+        searchConditionsDto().setSearchSettingFlag = true;
+        break;
+      }
+    }
+    //編集フラグがtrueの場合、検索条件を登録
+    if(searchConditionsDto().getSearchSettingFlag == true){
+      //検索条件を登録
+      searchConditionsDto().setProcessSearchItemChecked = _processSearchItemChecked;
+    }
+
     Navigator.push<void>(
         context,
         MaterialPageRoute<void>(
@@ -277,25 +298,25 @@ class _SeachDetailPageState extends State<SeachDetailPage> {
                             spacing: 8.0,
                             children: _experienceCategories
                                 .map((experienceCategory) {
-                              return RadioListTile<String>(
-                                title: Padding(
-                                  padding:
-                                  const EdgeInsets.only(left: 16.0 * 4),
-                                  child: Text(experienceCategory),
-                                ),
-                                value: experienceCategory,
-                                groupValue: _processesChecked[process],
-                                onChanged: (value) {
-                                  setState(() {
-                                    _processesChecked[process] = value;
-                                  });
-                                },
-                                contentPadding: EdgeInsets.zero,
-                                controlAffinity:
-                                ListTileControlAffinity.trailing,
-                              );
-                            }).toList(),
-                          ),
+                                return CheckboxListTile(
+                                  title: Text(experienceCategory),
+                                  value: _processSearchItemChecked[_processes.indexOf(process)][_experienceCategories.indexOf(experienceCategory)],
+                                  onChanged: (value) {
+                                    //のちログ消す
+                                    logger.i("'hako1: ${_processes.indexOf(process)}','hako2: ${_experienceCategories.indexOf(experienceCategory)}");
+                                    logger.i("'前フラグ: ${_processSearchItemChecked[_processes.indexOf(process)][_experienceCategories.indexOf(experienceCategory)]}'");
+
+                                    setState(() {
+                                      _processSearchItemChecked[_processes.indexOf(process)][_experienceCategories.indexOf(experienceCategory)] = value!;
+                                      logger.i("'後フラグ: ${_processSearchItemChecked[_processes.indexOf(process)][_experienceCategories.indexOf(experienceCategory)]}'");
+                                    });
+                                  },
+                                  controlAffinity:
+                                      ListTileControlAffinity.leading,
+                                  contentPadding: EdgeInsets.zero,
+                                );
+                              }).toList(),
+                            ),
                         ),
                     ],
                   ),
