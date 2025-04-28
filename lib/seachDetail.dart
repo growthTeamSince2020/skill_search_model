@@ -17,7 +17,8 @@ class SeachDetailPage extends StatefulWidget {
 
 class _SeachDetailPageState extends State<SeachDetailPage> {
 
-
+  // Singletonのインスタンスを取得
+  final searchConditionsDto searchConditions = searchConditionsDto();
 
   final logger = Logger(); //ロガーの宣言
   //編集フラグ
@@ -74,8 +75,12 @@ class _SeachDetailPageState extends State<SeachDetailPage> {
     }
 
     //編集フラグがNullの場合、初期化
-    if(searchConditionsDto().getSearchSettingFlag == null){
-      searchConditionsDto().setSearchSettingFlag = false;
+    if(searchConditions.getSearchSettingFlag == null){
+      searchConditions.setSearchSettingFlag = false;
+    }else if(searchConditions.getSearchSettingFlag == true){
+      //検索画面から編集フラグがtrueの場合、検索条件を設定
+      _ageChecked = searchConditions.getAgeDropdownSelectedValue;
+      _processSearchItemChecked = searchConditions.getProcessSearchItemChecked!;
     }
     _fetchUtilData().then((data) {
       setState(() {
@@ -102,21 +107,25 @@ class _SeachDetailPageState extends State<SeachDetailPage> {
     });
   }
 
+  void _clear(){
+    logger.i("クリアボタン押下されました");
+  }
   void _searchEngineer(){
     //checkboxにチェック付いているものがあるかチェックして編集フラグを更新
     if(_ageChecked! > 0){//年齢
-      searchConditionsDto().setSearchSettingFlag = true;
+      searchConditions.setSearchSettingFlag = true;
     }
     for(var item in _processSearchItemChecked){//工程
       if(item.any((value) => value == true)){
-        searchConditionsDto().setSearchSettingFlag = true;
+        searchConditions.setSearchSettingFlag = true;
         break;
       }
     }
     //編集フラグがtrueの場合、検索条件を登録
-    if(searchConditionsDto().getSearchSettingFlag == true){
+    if(searchConditions.getSearchSettingFlag == true){
       //検索条件を登録
-      searchConditionsDto().setProcessSearchItemChecked = _processSearchItemChecked;
+      searchConditions.setProcessSearchItemChecked = _processSearchItemChecked;
+      searchConditions.setAgeDropdownSelectedValue = _ageChecked;
     }
 
     Navigator.push<void>(
@@ -728,6 +737,20 @@ class _SeachDetailPageState extends State<SeachDetailPage> {
           ElevatedButton(
             onPressed: _searchEngineer,
             child: Text('検索'),
+            style: ElevatedButton.styleFrom(
+              side: const BorderSide(
+              color: Colors.black, //枠線!
+              width: 0.2, //枠線！
+            ),),
+          ),
+          ElevatedButton(
+            onPressed: _clear,
+            child: Text('クリア'),
+            style: ElevatedButton.styleFrom(
+              side: const BorderSide(
+                color: Colors.black, //枠線!
+                width: 0.2, //枠線！
+              ),),
           ),
         ],
     ));

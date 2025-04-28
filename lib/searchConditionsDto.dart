@@ -3,6 +3,14 @@ import 'package:logger/logger.dart';
 class searchConditionsDto{
   final logger = Logger(); //ロガーの宣言
 
+  // Singletonのインスタンスを保持
+  static final searchConditionsDto _instance = searchConditionsDto._internal();
+  // privateなコンストラクタ
+  searchConditionsDto._internal();
+  // ファクトリメソッド
+  factory searchConditionsDto() {
+    return _instance;
+  }
   /// 検索設定フラグ
   bool? _searchSettingFlag;
   // setter 検索設定フラグ
@@ -25,10 +33,12 @@ class searchConditionsDto{
   /// 工程取得リスト
   List<List<bool>>? _processSearchItemChecked;
   // setter 工程取得リスト
-  set setProcessSearchItemChecked(List<List<bool>>? newValue) {
+  set setProcessSearchItemChecked(List<List<bool>> newValue) {
     _processSearchItemChecked = newValue;
     logger.i('processSearchItemChecked が更新されました: $_processSearchItemChecked');
   }
   // getter 工程取得リスト
   List<List<bool>>? get getProcessSearchItemChecked => _processSearchItemChecked;
+
+
 }

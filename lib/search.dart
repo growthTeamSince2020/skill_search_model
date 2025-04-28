@@ -25,6 +25,10 @@ class _SearchPageState extends State<SearchPage> {
 
   // FireStoreの'arrays'コレクションのすべてのドキュメントを取得するプロバイダー。初回に全件分、あとは変更があるたびStreamに通知される。
   // final TextEditingController _controller = TextEditingController();
+
+
+  final searchConditionsDto searchConditions = searchConditionsDto();
+
   final logger = Logger(); //ロガーの宣言
   final nonData = constData.searchAgeSelectStringDefault; //定数クラスの宣言
 
@@ -48,7 +52,6 @@ class _SearchPageState extends State<SearchPage> {
   // bool _isCheckedOne = false;
   final designSize = Size(360, 690);
   int totalCount = 0;
-  final searchConditionsDto searchConditions = searchConditionsDto();
 
   //詳細検索アイコン押下時
   void _detailSearchScreen() {
@@ -262,22 +265,22 @@ class _SearchPageState extends State<SearchPage> {
     // 検索条件を元にクエリを作成
     Query query = engineer;
     //編集フラグがNullの場合、初期化
-    if(searchConditionsDto().getSearchSettingFlag == null){
-      searchConditionsDto().setSearchSettingFlag = false;
+    if(searchConditions.getSearchSettingFlag == null){
+      searchConditions.setSearchSettingFlag = false;
     //編集フラグがtrueの場合、検索
-    }else if(searchConditionsDto().getSearchSettingFlag == true){
-      if (codeLanguagesDropdownSelectedValue.isNotEmpty) {
-        query = query.where(
-            "code_languages", isEqualTo: codeLanguagesDropdownSelectedValue);
-      }
-      if (searchConditionsDto().getAgeDropdownSelectedValue! > 0) {
+    }else if(searchConditions.getSearchSettingFlag == true){
+      // if (codeLanguagesDropdownSelectedValue.isNotEmpty) {
+      //   query = query.where(
+      //       "code_languages", isEqualTo: codeLanguagesDropdownSelectedValue);
+      // }
+      if (searchConditions.getAgeDropdownSelectedValue! > 0) {
         int searchNum = 0;
-        logger.i("ageDropdownSelectedValue: ${searchConditionsDto().getAgeDropdownSelectedValue}");
-        if(searchConditionsDto().getAgeDropdownSelectedValue == 1){
+        logger.i("ageDropdownSelectedValue: ${searchConditions.getAgeDropdownSelectedValue}");
+        if(searchConditions.getAgeDropdownSelectedValue == 1){
           searchNum = 30;
-        }else if(searchConditionsDto().getAgeDropdownSelectedValue == 2){
+        }else if(searchConditions.getAgeDropdownSelectedValue == 2){
           searchNum = 40;
-        }else if(searchConditionsDto().getAgeDropdownSelectedValue == 3){
+        }else if(searchConditions.getAgeDropdownSelectedValue == 3){
           searchNum = 50;
         }
         query = query.where("age", isLessThanOrEqualTo: searchNum);
