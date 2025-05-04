@@ -6,19 +6,21 @@ import 'package:skill_search_model/common/constData.dart';
 import 'dart:async';
 import 'package:skill_search_model/search.dart';
 import 'package:skill_search_model/searchConditionsDto.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 
-class SeachDetailPage extends StatefulWidget {
+class SeachDetailPage extends ConsumerStatefulWidget{
+// StatefulWidget {
   const SeachDetailPage({super.key});
 
   @override
-  State<SeachDetailPage> createState() => _SeachDetailPageState();
+  ConsumerState<SeachDetailPage> createState() => _SeachDetailPageState();
 }
 
-class _SeachDetailPageState extends State<SeachDetailPage> {
+class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
 
-  // Singletonのインスタンスを取得
-  final searchConditionsDto searchConditions = searchConditionsDto();
+  // searchConProviderのインスタンスを取得
+  late SearchConditionsDto searchConditions;
 
   final logger = Logger(); //ロガーの宣言
   //編集フラグ
@@ -56,32 +58,11 @@ class _SeachDetailPageState extends State<SeachDetailPage> {
   [false,false,false,false], //単体
   [false,false,false,false], //結合
   [false,false,false,false]]; //保守
-  //年齢
-  int? _ageSearchItemChecked;
-
-  // List<String> teamRoleSearchItem; //チーム役割取得リスト
-  // List<String> codeLanguagesSearchItem; //経験言語取得リスト
-  // List<String> dbExperienceSearchItem; //DB取得リスト
-  // List<String> osExperienceSearchItem; //OS取得リスト
-  // List<String> cloudTechnologySearchItem; //クラウド取得リスト
-  // List<String> toolSearchItem; //ツール取得リスト
 
   @override
   void initState() {
     super.initState();
 
-    if(_ageChecked == null){
-      _ageChecked = 0;
-    }
-
-    //編集フラグがNullの場合、初期化
-    if(searchConditions.getSearchSettingFlag == null){
-      searchConditions.setSearchSettingFlag = false;
-    }else if(searchConditions.getSearchSettingFlag == true){
-      //検索画面から編集フラグがtrueの場合、検索条件を設定
-      _ageChecked = searchConditions.getAgeDropdownSelectedValue;
-      _processSearchItemChecked = searchConditions.getProcessSearchItemChecked!;
-    }
     _fetchUtilData().then((data) {
       setState(() {
         _teamRoles =
@@ -108,30 +89,19 @@ class _SeachDetailPageState extends State<SeachDetailPage> {
   }
 
   void _clear(){
+    //クリアボタン押下時
     logger.i("クリアボタン押下されました");
+    setState(() {
+      ref.read(searchConditionsControllerProvider.notifier).clear();
+      logger.i('編集フラグ：　'+searchConditions.getSearchSettingFlag.toString());
+      logger.i('年齢：　'+searchConditions.getAgeDropdownSelectedValue.toString());
+    });
   }
   void _searchEngineer(){
-    //checkboxにチェック付いているものがあるかチェックして編集フラグを更新
-    if(_ageChecked! > 0){//年齢
-      searchConditions.setSearchSettingFlag = true;
-    }
-    for(var item in _processSearchItemChecked){//工程
-      if(item.any((value) => value == true)){
-        searchConditions.setSearchSettingFlag = true;
-        break;
-      }
-    }
-    //編集フラグがtrueの場合、検索条件を登録
-    if(searchConditions.getSearchSettingFlag == true){
-      //検索条件を登録
-      searchConditions.setProcessSearchItemChecked = _processSearchItemChecked;
-      searchConditions.setAgeDropdownSelectedValue = _ageChecked;
-    }
-
     Navigator.push<void>(
         context,
         MaterialPageRoute<void>(
-        builder: (BuildContext context) => SearchPage(),
+        builder: (BuildContext context) => const SearchPage(),
     ),
     );
   }
@@ -212,6 +182,9 @@ class _SeachDetailPageState extends State<SeachDetailPage> {
   }
   @override
   Widget build(BuildContext context) {
+    // searchConProviderのインスタンスを取得
+    searchConditions = ref.watch(searchConditionsControllerProvider);
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.lightGreenAccent.shade700,
@@ -254,11 +227,13 @@ class _SeachDetailPageState extends State<SeachDetailPage> {
                     child: Text(ageKey),
                   ),
                   value: ageKey,
-                  groupValue: _ageList[_ageChecked!],
+                  groupValue: _ageList[searchConditions.getAgeDropdownSelectedValue as int],
+                  // groupValue: _ageList[_ageChecked!],
                   onChanged: (value) {
                     setState(() {
                       logger.i('value: ${_ageList.indexOf(value!)}');
-                      _ageChecked =_ageList.indexOf(value!);
+                      ref.read(searchConditionsControllerProvider.notifier).setAgeDropdownSelectedValue(_ageList.indexOf(value!));
+                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingFlag(true);
                     });
                   },
                   contentPadding: EdgeInsets.zero,
