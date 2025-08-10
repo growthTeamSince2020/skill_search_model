@@ -1,3 +1,6 @@
+import 'dart:js_interop';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:logger/logger.dart';
@@ -7,7 +10,7 @@ import 'package:skill_search_model/seachDetail.dart';
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:skill_search_model/searchConditionsDto.dart';
+import 'package:skill_search_model/model/searchConditionsDto.dart';
 
 final logger = Logger(); //ロガーの宣言
 /// Example without a datasource
@@ -155,6 +158,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             }
             return ListView.builder(
               itemCount: snapshot.data?.size as int,
+              //検索total数の更新
+              semanticChildCount: totalCount = snapshot.data?.size as int,
               itemBuilder: (context, index) {
                 return Card(
                   color: Colors.white,
@@ -162,11 +167,11 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                   child: ListTile(
                     iconColor: Colors.grey,
                     title: Text(
-                      snapshot.data?.docs[index]['last_name'] +
+                        snapshot.data!.docs[index]['last_name'] +
                           snapshot.data?.docs[index]['first_name'] +
                           constData.space +
                           constData.rightBracket +
-                          snapshot.data?.docs[index]['age'].toString() +
+                          snapshot.data!.docs[index]['age'].toString() +
                           constData.age +
                           constData.leftBracket,
                       style: const TextStyle(fontSize: 20),
@@ -323,16 +328,17 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
   /* 検索条件を指定してクエリを作成して返す
    * @param なし
-   * @return なし
+   * @return 検索結果
   */
   Stream<QuerySnapshot> getStream() {
     // 検索条件を元にクエリを作成
     Query query = engineer;
     //編集フラグがNullの場合、初期化
+    if(searchConditions.getSearchSettingFlag == true){
+      ///年齢
       if (searchConditions.getAgeDropdownSelectedValue! > 0) {
         int searchNum = 0;
-        logger.i(
-            "ageDropdownSelectedValue: ${searchConditions.getAgeDropdownSelectedValue}");
+        logger.i("ageDropdownSelectedValue: ${searchConditions.getAgeDropdownSelectedValue}");
         if (searchConditions.getAgeDropdownSelectedValue == 1) {
           searchNum = 30;
         } else if (searchConditions.getAgeDropdownSelectedValue == 2) {
@@ -342,6 +348,85 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         }
         query = query.where("age", isLessThanOrEqualTo: searchNum);
       }
+
+    }
+    ///工程経験
+    ///experience_category
+    // （配列）
+    // 0
+    // "未経験"
+    // （文字列）
+    // 1
+    // "経験あり作成サポート必要"
+    // （文字列）
+    // 2
+    // "サポートなくできる"
+    // （文字列）
+    // 3
+    // "経験豊富でレビューできる"
+
+    //工程の検索マップ
+    Map<int,List<int>> processSearchMap = {};
+    if(searchConditions.getProcessSearchItemChecked!.length > 0){
+      //検索条件
+      logger.i("検索processSearchItemChecked: ${searchConditions.getProcessSearchItemChecked}");
+      for (int i = 0; i < searchConditions.getProcessSearchItemChecked!.length; i++) {
+        List<int> shearchTrueItemNum = []; //trueだった経験値を保持
+        Map<int,List<int>> processSearchMapmini={};
+        bool trueFlg = false; //trueが一つでもあればtrue
+        for (int j = 0; j < searchConditions.getProcessSearchItemChecked![i].length; j++) {
+          if (searchConditions.getProcessSearchItemChecked![i][j] == true) {
+            trueFlg = true;
+            shearchTrueItemNum.add(j);
+          }
+        }
+        if(trueFlg){
+          Map<int,List<int>> processSearchMapMini = {i:shearchTrueItemNum};
+          processSearchMap.addEntries(processSearchMapMini.entries);
+        }
+      }
+      // キーの取得
+      Iterable<int> keys = processSearchMap.keys;
+      List<int> key = keys.toList();
+
+      //工程の要素の検索
+      if(keys.length > 0){
+        logger.i("検索process: ${key}");
+        query = query.where("process", arrayContainsAny: key);
+      }
+
+      List<String> result=[];
+      //https://azukiazusa.dev/blog/firebase-cloud-firestore-query/
+      // query.get().then((QuerySnapshot querySnapshot) {
+      //   // querySnapshotをループしてデータを取り出します。
+      //   querySnapshot.docs.forEach((DocumentSnapshot documentSnapshot) {
+      //     var data = documentSnapshot.data() as Map<String, dynamic>;
+      //     var dataList = data["process"];
+      //     var experienceList = data["process_experience"];
+      //     for (int i = 0; i < dataList.length; i++) {
+      //       if(processSearchMap.containsKey(dataList[i])){
+      //         //工程経験条件リスト
+      //         List<int> dataList2 = processSearchMap[dataList[i]]!;
+      //
+      //         for (int j = 0; j < dataList2.length; j++) {
+      //           //工程経験の条件が合致した場合、追加
+      //           if(experienceList[i] == dataList2[j]){
+      //             result.add(documentSnapshot.id.toString());
+      //             break;
+      //           }
+      //         }
+      //       };
+      //     }
+      //   });
+      // });
+      // if(result.isNotEmpty){
+      //   query = query.where(
+      //     FieldPath.documentId,
+      //     whereIn: result,
+      //   );
+      // }
+    }
+
     return query.snapshots();
   }
 
@@ -379,7 +464,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         "utilData", "years_category_item", "years_category", false); //ツール取得リスト
 
     setState(() {
-      totalCount = codeLanguagesResult.length;
+      // totalCount = codeLanguagesResult.length;
       codeLanguagesSelectItem = codeLanguagesSelectItemsResult; //言語選択プルダウン
       codeLanguagesItem = codeLanguagesResult; //言語リスト
       processItem = processItemResult; //工程取得リスト
@@ -476,46 +561,47 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   }
 }
 
-  List<String>? getUtilDateListGetterSimpleEvaluation(numberList, List<String> utilDataArray, numberList2, bool experienceCategory) {
-    //工程だけexperience_category
-    String simpleEvaluationWord;
+List<String>? getUtilDateListGetterSimpleEvaluation(numberList,
+    List<String> utilDataArray, numberList2, bool experienceCategory) {
+  //工程だけexperience_category
+  String simpleEvaluationWord;
 
-    List<String> utilDataListForReturn = [];
-    // logger.i("numberList: $numberList");
-    // logger.i("utilDataArray: $utilDataArray");
-    // logger.i("numberList2: $numberList2");
-    if (utilDataArray.isEmpty ||
-    numberList.isEmpty ||
-    numberList2.isEmpty ||
-    numberList.length != numberList2.length) {
+  List<String> utilDataListForReturn = [];
+  // logger.i("numberList: $numberList");
+  // logger.i("utilDataArray: $utilDataArray");
+  // logger.i("numberList2: $numberList2");
+  if (utilDataArray.isEmpty ||
+      numberList.isEmpty ||
+      numberList2.isEmpty ||
+      numberList.length != numberList2.length) {
     return ["No Data"];
-    }
-
-    for (int i = 0; i < numberList.length; i++) {
-    if (i < utilDataArray.length) {
-    if (numberList2[i] < 2) {
-    simpleEvaluationWord = constData.triangle;
-    } else if (numberList2[i] < 4) {
-    if (experienceCategory && numberList2[i] == 3) {
-    simpleEvaluationWord = constData.doubleCircle;
-    } else {
-    simpleEvaluationWord = constData.circle;
-    }
-    } else {
-    simpleEvaluationWord = constData.doubleCircle;
-    }
-    utilDataListForReturn.add(utilDataArray[i] +
-    constData.space +
-    simpleEvaluationWord +
-    constData.space);
-    } else {
-    logger.e("Index out of range: $i"); // 範囲外のインデックスをログに出力
-    }
-    }
-
-    return utilDataListForReturn;
   }
-  /* UtilDateのリストから文字列取得してListにして返す
+
+  for (int i = 0; i < numberList.length; i++) {
+    if (i < utilDataArray.length) {
+      if (numberList2[i] < 2) {
+        simpleEvaluationWord = constData.triangle;
+      } else if (numberList2[i] < 4) {
+        if (experienceCategory && numberList2[i] == 3) {
+          simpleEvaluationWord = constData.doubleCircle;
+        } else {
+          simpleEvaluationWord = constData.circle;
+        }
+      } else {
+        simpleEvaluationWord = constData.doubleCircle;
+      }
+      utilDataListForReturn.add(utilDataArray[i] +
+          constData.space +
+          simpleEvaluationWord +
+          constData.space);
+    } else {
+      logger.e("Index out of range: $i"); // 範囲外のインデックスをログに出力
+    }
+  }
+  return utilDataListForReturn;
+}
+
+/* UtilDateのリストから文字列取得してListにして返す
    * @param List<dynamic> numberList 番号のリスト
    * @param List<String> utilDataArray utilDataのリスト
    * @return 選択肢文字列のList

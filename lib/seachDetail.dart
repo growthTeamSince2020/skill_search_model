@@ -5,7 +5,7 @@ import 'package:logger/logger.dart';
 import 'package:skill_search_model/common/constData.dart';
 import 'dart:async';
 import 'package:skill_search_model/search.dart';
-import 'package:skill_search_model/searchConditionsDto.dart';
+import 'package:skill_search_model/model/searchConditionsDto.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 
@@ -50,19 +50,11 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
   int? _ageChecked;
 
   //工程取得リスト
-  List<List<bool>> _processSearchItemChecked
-  = [[false,false,false,false], //要件定義
-  [false,false,false,false], //基本設計
-  [false,false,false,false], //詳細設計
-  [false,false,false,false], //コーディング
-  [false,false,false,false], //単体
-  [false,false,false,false], //結合
-  [false,false,false,false]]; //保守
+  late List<List<bool>> _processSearchItemChecked;
 
   @override
   void initState() {
     super.initState();
-
     _fetchUtilData().then((data) {
       setState(() {
         _teamRoles =
@@ -184,6 +176,8 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
   Widget build(BuildContext context) {
     // searchConProviderのインスタンスを取得
     searchConditions = ref.watch(searchConditionsControllerProvider);
+    //工程経験の値を取得
+    _processSearchItemChecked = searchConditions.getProcessSearchItemChecked!;
 
     return Scaffold(
       appBar: AppBar(
@@ -347,13 +341,10 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
                                   title: Text(experienceCategory),
                                   value: _processSearchItemChecked[_processes.indexOf(process)][_experienceCategories.indexOf(experienceCategory)],
                                   onChanged: (value) {
-                                    //のちログ消す
-                                    logger.i("'hako1: ${_processes.indexOf(process)}','hako2: ${_experienceCategories.indexOf(experienceCategory)}");
-                                    logger.i("'前フラグ: ${_processSearchItemChecked[_processes.indexOf(process)][_experienceCategories.indexOf(experienceCategory)]}'");
-
                                     setState(() {
                                       _processSearchItemChecked[_processes.indexOf(process)][_experienceCategories.indexOf(experienceCategory)] = value!;
-                                      logger.i("'後フラグ: ${_processSearchItemChecked[_processes.indexOf(process)][_experienceCategories.indexOf(experienceCategory)]}'");
+                                      ref.read(searchConditionsControllerProvider.notifier).setProcessSearchItemChecked(_processSearchItemChecked);
+                                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingFlag(true);
                                     });
                                   },
                                   controlAffinity:
