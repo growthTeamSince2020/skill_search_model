@@ -49,7 +49,24 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
   final Map<String, String?> _toolChecked = {};
   int? _ageChecked;
 
-  //工程取得リスト
+  //工程取得リスト(小項目のチェック状態)などの初期化
+  final List<List<bool>> _search4ItemCheckedInit = [
+    [false, false, false, false], //要件定義
+    [false, false, false, false], //基本設計
+    [false, false, false, false], //詳細設計
+    [false, false, false, false], //コーディング
+    [false, false, false, false], //単体
+    [false, false, false, false], //結合
+    [false, false, false, false] //保守
+  ];
+  //工程取得リスト(大項目のチェック状態)の初期化
+  final List<bool> _searchItemProcessInit = [false, false, false, false, false, false, false];
+
+  //工程取得(フラグ)リスト
+  late bool _searchSettingFlagProcess;
+  //工程取得(大項目のチェック状態)リスト
+  late List<bool> _processSearchChecked;
+  //工程取得(子項目のチェック状態)リスト
   late List<List<bool>> _processSearchItemChecked;
 
   @override
@@ -90,6 +107,32 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
     });
   }
   void _searchEngineer(){
+    // searchConProviderのインスタンスを取得
+    searchConditions = ref.watch(searchConditionsControllerProvider);
+
+    //工程経験(大項目チェックリスト、フラグ)の値の初期化　各フラグが全てfalse（初期値）だったらフラグをfalseにする
+    bool processSearchItemCheckedAllFalse = _processSearchItemChecked.every((row) => row.every((element) => element == false));
+    if(processSearchItemCheckedAllFalse) {
+      ref.read(searchConditionsControllerProvider.notifier).processClear();
+     }else{
+      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingProcessFlag(true);
+    }
+
+    //検索設定フラグの値の初期化　各フラグが全てfalseだったら検索設定フラグをfalseにする
+    if(searchConditions.getAgeDropdownSelectedValue == 0 //年齢が初期値
+        && searchConditions.getSearchSettingProcessFlag == false //工程経験が初期値
+    ){
+      ref.read(searchConditionsControllerProvider.notifier).clear();
+    }else{
+      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingFlag(true);
+    }
+
+    searchConditions = ref.watch(searchConditionsControllerProvider);
+
+    logger.i("詳細検索画面側　getSearchSettingFlag: ${searchConditions.getSearchSettingFlag}");
+    logger.i("詳細検索画面側　getAgeDropdownSelectedValue: ${searchConditions.getAgeDropdownSelectedValue}");
+    logger.i("詳細検索画面側　getSearchSettingProcessFlag: ${searchConditions.getSearchSettingProcessFlag}");
+
     Navigator.push<void>(
         context,
         MaterialPageRoute<void>(
@@ -174,10 +217,19 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
   }
   @override
   Widget build(BuildContext context) {
+
     // searchConProviderのインスタンスを取得
     searchConditions = ref.watch(searchConditionsControllerProvider);
-    //工程経験の値を取得
+
+    //年齢の値を取得
+    _ageChecked = searchConditions.getAgeDropdownSelectedValue;
+    //工程経験(フラグ)の値を取得
+    _searchSettingFlagProcess = searchConditions.getSearchSettingProcessFlag!;
+    //工程経験(大項目のチェック状態)の値を取得
+    _processSearchChecked = searchConditions.getProcessSearchChecked!;
+    //工程経験(小項目のチェック状態)の値を取得
     _processSearchItemChecked = searchConditions.getProcessSearchItemChecked!;
+
 
     return Scaffold(
       appBar: AppBar(
@@ -211,6 +263,7 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
                   Text("年齢"),
                 ],
               ),
+              initiallyExpanded: _ageChecked == 0 ? false : true, //初期値０以外ならtrueで自動で開く
               childrenPadding: EdgeInsets.only(left: 16.0, bottom: 16.0),
               children: _ageList.map((ageKey) {
                 return
@@ -227,7 +280,9 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
                     setState(() {
                       logger.i('value: ${_ageList.indexOf(value!)}');
                       ref.read(searchConditionsControllerProvider.notifier).setAgeDropdownSelectedValue(_ageList.indexOf(value!));
-                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingFlag(true);
+                      if(_ageChecked != 0){
+                        ref.read(searchConditionsControllerProvider.notifier).setSearchSettingFlag(true); //検索設定フラグを更新
+                      }
                     });
                   },
                   contentPadding: EdgeInsets.zero,
@@ -313,6 +368,7 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
                   Text('工程'),
                 ],
               ),
+              initiallyExpanded: _searchSettingFlagProcess, //trueだと自動で開く
               children: _processes.map((process) {
                 return Padding(
                   padding: const EdgeInsets.only(left: 16.0),
@@ -321,16 +377,22 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
                     children: [
                       CheckboxListTile(
                         title: Text(process),
-                        value: _processesChecked[process] != null,
+                        value: _processSearchChecked[_processes.indexOf(process)],
                         onChanged: (value) {
                           setState(() {
-                            _processesChecked[process] = value! ? '選択' : null;
+                            _processSearchChecked[_processes.indexOf(process)] = value!;
+                            ref.read(searchConditionsControllerProvider.notifier).setProcessSearchChecked(_processSearchChecked);
+                            if(value == false){
+                              //大項目がチェックがFALSEになったら小項目もFALSEにする
+                              _processSearchItemChecked[_processes.indexOf(process)] = [false,false,false,false];
+                              ref.read(searchConditionsControllerProvider.notifier).setProcessSearchItemChecked(_processSearchItemChecked);
+                            }
                           });
                         },
                         controlAffinity: ListTileControlAffinity.leading,
                         contentPadding: EdgeInsets.zero,
                       ),
-                      if (_processesChecked[process] != null)
+                      if (_processSearchChecked[_processes.indexOf(process)] == true)
                         Padding(
                           padding: const EdgeInsets.only(left: 16.0),
                           child: Wrap(
@@ -344,6 +406,7 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
                                     setState(() {
                                       _processSearchItemChecked[_processes.indexOf(process)][_experienceCategories.indexOf(experienceCategory)] = value!;
                                       ref.read(searchConditionsControllerProvider.notifier).setProcessSearchItemChecked(_processSearchItemChecked);
+                                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingProcessFlag(true);
                                       ref.read(searchConditionsControllerProvider.notifier).setSearchSettingFlag(true);
                                     });
                                   },
