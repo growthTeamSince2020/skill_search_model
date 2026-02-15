@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skill_search_model/search.dart';
 
-import 'engineerRegistrationForm.dart';
+import 'engineerInputForm.dart';
+import 'engineerRegistrationScreen.dart';
 import 'common/firebase_options.dart';
 
 void main() async {
@@ -41,7 +42,8 @@ class _MyWidgetState extends State<MyWidget> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   final List<Map<String, dynamic>> menuItems = [
-    {'icon': Icons.person_add, 'title': '技術者登録','page':EngineerRegistrationForm(), 'color': Colors.red}, // 色を追加
+    // {'icon': Icons.person_add, 'title': '技術者登録','page':EngineerRegistrationForm(), 'color': Colors.red}, // 色を追加
+    {'icon': Icons.person_add, 'title': '技術者登録','page':EngineerInputForm(), 'color': Colors.red}, // 色を追加
     {'icon': Icons.person_remove, 'title': '技術者削除', 'color': Colors.green}, // 色を追加
     {'icon': Icons.search, 'title': '検索一覧', 'page': SearchPage(), 'color': Colors.blue}, // 色を追加
     {'icon': Icons.dashboard, 'title': 'ダッシュボード', 'color': Colors.orange}, // 色を追加
