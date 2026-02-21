@@ -212,49 +212,42 @@ class _EngineerInputFormState extends State<EngineerInputForm> {
       'age': _ageController.text,
       'nearest_station_line_name': _nearestStationLineNameController.text,
       'nearest_station_name': _nearestStationNameController.text,
-
       'team_role': _teamRolesChecked.entries
           .where((entry) => entry.value != null && entry.value != '選択')
           .fold<Map<String, String>>(<String, String>{}, (map, entry) {
         map[entry.key] = entry.value!;
         return map;
       }),
-
       'processes': _processesChecked.entries
           .where((entry) => entry.value != null && entry.value != '選択')
           .fold<Map<String, String>>(<String, String>{}, (map, entry) {
         map[entry.key] = entry.value!;
         return map;
       }),
-
       'code_languages': _codeLanguagesChecked.entries
           .where((entry) => entry.value != null && entry.value != '選択')
           .fold<Map<String, String>>(<String, String>{}, (map, entry) {
         map[entry.key] = entry.value!;
         return map;
       }),
-
       'db_experience': _dbExperienceChecked.entries
           .where((entry) => entry.value != null && entry.value != '選択')
           .fold<Map<String, String>>(<String, String>{}, (map, entry) {
         map[entry.key] = entry.value!;
         return map;
       }),
-
       'os_experience': _osExperienceChecked.entries
           .where((entry) => entry.value != null && entry.value != '選択')
           .fold<Map<String, String>>(<String, String>{}, (map, entry) {
         map[entry.key] = entry.value!;
         return map;
       }),
-
       'cloud_technology': _cloudTechChecked.entries
           .where((entry) => entry.value != null && entry.value != '選択')
           .fold<Map<String, String>>(<String, String>{}, (map, entry) {
         map[entry.key] = entry.value!;
         return map;
       }),
-
       'tool': _toolChecked.entries
           .where((entry) => entry.value != null && entry.value != '選択')
           .fold<Map<String, String>>(<String, String>{}, (map, entry) {
@@ -287,6 +280,24 @@ class _EngineerInputFormState extends State<EngineerInputForm> {
           key: _formKey,
           child: ListView(
             children: <Widget>[
+              Align(
+                alignment: Alignment.centerLeft, // 左寄せにする
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 0), // 下の余白をゼロに
+                  child: RichText(
+                    text: const TextSpan(
+                      style: TextStyle(color: Colors.black87, fontSize: 11), // フォントサイズを少し小さく
+                      children: <TextSpan>[
+                        TextSpan(
+                          text: '*',
+                          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                        ),
+                        TextSpan(text: ' は必須入力項目です'),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
               // 名・苗字・年齢
               Row(
                 children: [
@@ -296,7 +307,7 @@ class _EngineerInputFormState extends State<EngineerInputForm> {
                       controller: _firstNameController,
                       onChanged: (value) => _validateField('名', value),
                       decoration: InputDecoration(
-                        labelText: '名',
+                        label: _buildRequiredLabel('名'),
                         prefixIcon: const Icon(Icons.person),
                         errorText: _validationResults['名'],
                       ),
@@ -309,7 +320,7 @@ class _EngineerInputFormState extends State<EngineerInputForm> {
                       controller: _lastNameController,
                       onChanged: (value) => _validateField('苗字', value),
                       decoration: InputDecoration(
-                        labelText: '苗字',
+                        label: _buildRequiredLabel('苗字'),
                         prefixIcon: const Icon(Icons.person),
                         errorText: _validationResults['苗字'],
                       ),
@@ -322,7 +333,7 @@ class _EngineerInputFormState extends State<EngineerInputForm> {
                       controller: _ageController,
                       onChanged: (value) => _validateField('年齢', value),
                       decoration: InputDecoration(
-                        labelText: '年齢',
+                        label: _buildRequiredLabel('年齢'),
                         prefixIcon: const Icon(Icons.person_outline),
                         errorText: _validationResults['年齢'],
                       ),
@@ -340,7 +351,7 @@ class _EngineerInputFormState extends State<EngineerInputForm> {
                       controller: _nearestStationLineNameController,
                       onChanged: (value) => _validateField('最寄沿線', value),
                       decoration: InputDecoration(
-                        labelText: '最寄沿線',
+                        label: _buildRequiredLabel('最寄沿線'),
                         prefixIcon: const Icon(Icons.linear_scale),
                         errorText: _validationResults['最寄沿線'],
                       ),
@@ -353,7 +364,7 @@ class _EngineerInputFormState extends State<EngineerInputForm> {
                       controller: _nearestStationNameController,
                       onChanged: (value) => _validateField('最寄駅', value),
                       decoration: InputDecoration(
-                        labelText: '最寄駅',
+                        label: _buildRequiredLabel('最寄駅'),
                         prefixIcon: const Icon(Icons.train),
                         errorText: _validationResults['最寄駅'],
                       ),
@@ -363,13 +374,20 @@ class _EngineerInputFormState extends State<EngineerInputForm> {
               ),
 
               // 各 ExpansionTile (共通の構造のため一部省略しつつツールまで記載)
-              _buildExpansionTile('チーム役割', Icons.group, _teamRoles, _teamRolesChecked, _yearsCategories),
-              _buildExpansionTile('工程', Icons.account_tree, _processes, _processesChecked, _experienceCategories),
-              _buildExpansionTile('経験言語', Icons.developer_mode, _codeLanguages, _codeLanguagesChecked, _yearsCategories),
-              _buildExpansionTile('DB言語', Icons.storage, _dbExperience, _dbExperienceChecked, _yearsCategories),
-              _buildExpansionTile('OS言語', Icons.memory, _osExperience, _osExperienceChecked, _yearsCategories),
-              _buildExpansionTile('クラウド技術', Icons.cloud, _cloudTech, _cloudTechChecked, _yearsCategories),
-              _buildExpansionTile('ツール', Icons.build, _tool, _toolChecked, _yearsCategories),
+              _buildExpansionTile('チーム役割', Icons.group, _teamRoles,
+                  _teamRolesChecked, _yearsCategories),
+              _buildExpansionTile('工程', Icons.account_tree, _processes,
+                  _processesChecked, _experienceCategories),
+              _buildExpansionTile('経験言語', Icons.developer_mode, _codeLanguages,
+                  _codeLanguagesChecked, _yearsCategories),
+              _buildExpansionTile('DB言語', Icons.storage, _dbExperience,
+                  _dbExperienceChecked, _yearsCategories),
+              _buildExpansionTile('OS言語', Icons.memory, _osExperience,
+                  _osExperienceChecked, _yearsCategories),
+              _buildExpansionTile('クラウド技術', Icons.cloud, _cloudTech,
+                  _cloudTechChecked, _yearsCategories),
+              _buildExpansionTile(
+                  'ツール', Icons.build, _tool, _toolChecked, _yearsCategories),
 
               const SizedBox(height: 30),
 
@@ -413,13 +431,15 @@ class _EngineerInputFormState extends State<EngineerInputForm> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => EngineerRegistrationScreen(engineerData: data),
+                        builder: (context) =>
+                            EngineerRegistrationScreen(engineerData: data),
                       ),
                     );
                   }
                 },
                 child: const Text('登録内容を確認する',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               ),
               const SizedBox(height: 50),
             ],
@@ -430,38 +450,46 @@ class _EngineerInputFormState extends State<EngineerInputForm> {
   }
 
   // リファクタリング用：共通の ExpansionTile ビルダー
-  Widget _buildExpansionTile(String title, IconData icon, List<String> items, Map<String, String?> checkedMap, List<String> categories) {
+  Widget _buildExpansionTile(String title, IconData icon, List<String> items,
+      Map<String, String?> checkedMap, List<String> categories) {
     return Container(
-      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey, width: 1.0))),
+      decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: Colors.grey, width: 1.0))),
       child: ExpansionTile(
-        title: Row(children: [Icon(icon), const SizedBox(width: 8), Text(title)]),
+        title:
+            Row(children: [Icon(icon), const SizedBox(width: 8), Text(title)]),
         children: items.map((item) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CheckboxListTile(
-                title: Text(item, style: const TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(item,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 value: checkedMap[item] != null,
-                onChanged: (val) => setState(() => checkedMap[item] = val! ? '選択' : null),
+                onChanged: (val) =>
+                    setState(() => checkedMap[item] = val! ? '選択' : null),
                 controlAffinity: ListTileControlAffinity.leading,
               ),
               // チェックが入っている場合のみ横並びのラジオボタンを表示
               if (checkedMap[item] != null)
                 Padding(
-                  padding: const EdgeInsets.only(left: 48.0, bottom: 8.0), // 左側にインデント
+                  padding: const EdgeInsets.only(left: 48.0, bottom: 8.0),
+                  // 左側にインデント
                   child: Wrap(
                     spacing: 8.0, // 横の間隔
                     runSpacing: 0.0, // 縦の間隔
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: categories.map((cat) {
-                      return IntrinsicWidth( // 中身に合わせて最小限の幅にする
+                      return IntrinsicWidth(
+                        // 中身に合わせて最小限の幅にする
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Radio<String>(
                               value: cat,
                               groupValue: checkedMap[item],
-                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, // 余白を詰める
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap, // 余白を詰める
                               onChanged: (String? val) {
                                 if (val != null) {
                                   setState(() => checkedMap[item] = val);
@@ -469,10 +497,12 @@ class _EngineerInputFormState extends State<EngineerInputForm> {
                               },
                             ),
                             GestureDetector(
-                              onTap: () => setState(() => checkedMap[item] = cat),
+                              onTap: () =>
+                                  setState(() => checkedMap[item] = cat),
                               child: Text(
                                 cat,
-                                style: const TextStyle(fontSize: 12.0), // 文字を少し小さく
+                                style:
+                                    const TextStyle(fontSize: 12.0), // 文字を少し小さく
                               ),
                             ),
                           ],
@@ -487,21 +517,23 @@ class _EngineerInputFormState extends State<EngineerInputForm> {
       ),
     );
   }
-  // エラーメッセージをモーダルで表示するための共通メソッド
+
   // エラーメッセージをモーダルで表示するための共通メソッド
   void _showErrorDialog(List<String> errors) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.red[50], // ★ ここで背景色を指定（例：薄い赤）
-        surfaceTintColor: Colors.white, // Material3の場合、これを白にすると背景色が綺麗に出ます
+        backgroundColor: Colors.white,
+        // ★ ここで背景色を指定（例：薄い赤）
+        surfaceTintColor: Colors.white,
+        // Material3の場合、これを白にすると背景色が綺麗に出ます
         title: const Row(
           children: [
             Icon(Icons.error_outline, color: Colors.red),
-            SizedBox(width: 8),
+            SizedBox(width: 10),
             Text(
               '入力内容を確認してください',
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold), // タイトル文字も赤くすると統一感が出ます
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -509,16 +541,38 @@ class _EngineerInputFormState extends State<EngineerInputForm> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: errors.map((e) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text('・ $e', style: const TextStyle(fontSize: 14, color: Colors.black87)),
-            )).toList(),
+            children: errors
+                .map((e) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Text('・ $e',
+                          style: const TextStyle(
+                              fontSize: 14, color: Colors.black87)),
+                    ))
+                .toList(),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('閉じる', style: TextStyle(color: Colors.black)), // ボタンも赤系に
+            child: const Text('閉じる',
+                style: TextStyle(color: Colors.black)), // ボタンも赤系に
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 必須ラベルを作成するヘルパーメソッド
+  Widget _buildRequiredLabel(String label) {
+    return RichText(
+      text: TextSpan(
+        text: label,
+        style: const TextStyle(color: Colors.black87, fontSize: 16), // 通常の文字色
+        children: const [
+          TextSpan(
+            text: ' *',
+            style: TextStyle(
+                color: Colors.red, fontWeight: FontWeight.bold), // 赤いアスタリスク
           ),
         ],
       ),
