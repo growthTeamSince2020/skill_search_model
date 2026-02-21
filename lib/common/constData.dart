@@ -41,4 +41,103 @@ class constData{
   static const String engineerSearchCloud1  = "クラウド技術";
   static const String engineerSearchTool1  = "ツール経験";
 
+
+  /* 登録画面 */
+  /// Firestore 'utilData' コレクション内のドキュメント名リスト
+  static const List<String> masterDocs = [
+    'team_role_item',
+    'process_item',
+    'code_languages_item',
+    'db_experience_item',
+    'os_experience_item',
+    'cloud_technology_item',
+    'tool_item',
+  ];
+  // --- 経験年数・レベルの選択肢文言（これらはUI表示の比較に使うため残す） ---
+  static const String yearsLabel0 = "1年未満";
+  static const String yearsLabel1 = "1年〜2年未満";
+  static const String yearsLabel2 = "2〜3年未満";
+  static const String yearsLabel3 = "3〜5年未満";
+  static const String yearsLabel4 = "5〜10年未満";
+  static const String yearsLabel5 = "10年以上";
+
+  static const String levelLabel0 = "未経験";
+  static const String levelLabel1 = "経験あり作成サポート必要";
+  static const String levelLabel2 = "サポートなくできる";
+  static const String levelLabel3 = "経験豊富でレビューできる";
+
+  static const String simpleYearsLabel0 = "未経験";
+  static const String simpleYearsLabel1 = "1年未満";
+  static const String simpleYearsLabel2 = "1年〜2年未満";
+  static const String simpleYearsLabel3 = "2〜3年未満";
+  static const String simpleYearsLabel4 = "5年以上";
+
+  // ==========================================
+  // 2. 外部公開用：一括データ変換メソッド
+  // ==========================================
+
+  /// sourceData: UIからのMapデータ
+  /// masterList: Firebase(utilData)から取得した項目のリスト
+  /// type: 'years' | 'level' | 'simple'
+  static Map<String, List<int>> convertDataToNumericArrays(
+      dynamic sourceData, List<String> masterList, String type) {
+    List<int> nameIndices = [];
+    List<int> valueIndices = [];
+
+    if (sourceData is Map) {
+      sourceData.forEach((key, value) {
+        // Firebaseから取得したマスターリスト内でのインデックスを探す
+        int nameIdx = masterList.indexOf(key.toString());
+        if (nameIdx != -1) {
+          nameIndices.add(nameIdx);
+
+          int valIdx;
+          switch (type) {
+            case 'level':
+              valIdx = _getLevelValue(value?.toString());
+              break;
+            case 'simple':
+              valIdx = _getToolYearsValue(value?.toString());
+              break;
+            default:
+              valIdx = _getYearsValue(value?.toString());
+          }
+          valueIndices.add(valIdx);
+        }
+      });
+    }
+    return {'names': nameIndices, 'values': valueIndices};
+  }
+
+  // ==========================================
+  // 3. 内部用プライベートメソッド
+  // ==========================================
+  // チーム役割,経験言語,DB,OS,クラウドの変換値
+  static int _getYearsValue(String? label) {
+    if (label == yearsLabel0) return 0;
+    if (label == yearsLabel1) return 1;
+    if (label == yearsLabel2) return 2;
+    if (label == yearsLabel3) return 3;
+    if (label == yearsLabel4) return 4;
+    if (label == yearsLabel5) return 5;
+    return 0;
+  }
+  // 工程の変換値
+  static int _getLevelValue(String? label) {
+    if (label == levelLabel0) return 0;
+    if (label == levelLabel1) return 1;
+    if (label == levelLabel2) return 2;
+    if (label == levelLabel3) return 3;
+    return 0;
+  }
+
+  // ツールの変換値
+  static int _getToolYearsValue(String? label) {
+    if (label == simpleYearsLabel0) return 0;
+    if (label == simpleYearsLabel1) return 1;
+    if (label == simpleYearsLabel2) return 2;
+    if (label == simpleYearsLabel3) return 3;
+    if (label == simpleYearsLabel4) return 4;
+    return 0;
+  }
 }
