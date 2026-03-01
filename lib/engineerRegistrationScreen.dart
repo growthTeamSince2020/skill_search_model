@@ -1,84 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:skill_search_model/utils/uiUtils.dart';
 import 'common/constData.dart';
 
 class EngineerRegistrationScreen extends StatefulWidget {
   final Map<String, dynamic> engineerData;
+
   const EngineerRegistrationScreen({super.key, required this.engineerData});
 
   @override
-  State<EngineerRegistrationScreen> createState() => _EngineerRegistrationScreenState();
+  State<EngineerRegistrationScreen> createState() =>
+      _EngineerRegistrationScreenState();
 }
 
-class _EngineerRegistrationScreenState extends State<EngineerRegistrationScreen> {
+class _EngineerRegistrationScreenState
+    extends State<EngineerRegistrationScreen> {
   bool _isRegistering = false;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  /// 登録完了・失敗時のモーダル表示
-  void _showResultDialog({
-    required String title,
-    required String message,
-    required bool isError,
-    VoidCallback? onNext,
-  }) {
-    showDialog(
-      context: context,
-      barrierDismissible: false, // 枠外タップで閉じない
-      barrierColor: Colors.black.withOpacity(0.7), // 背景を暗くする
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
-        title: Row(
-          children: [
-            Icon(
-              isError ? Icons.error_outline : Icons.check_circle_outline,
-              color: isError ? Colors.red : Colors.green,
-            ),
-            const SizedBox(width: 8),
-            Text(title, style: TextStyle(color: isError ? Colors.red : Colors.green, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Text(message),
-        actions: [
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context); // モーダルを閉じる
-                if (onNext != null) onNext();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isError ? Colors.red : Colors.green,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('OK'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // メインカラー
+  static const themeGreen = Color(0xFF2E7D32);
 
-  /// 登録メイン処理
   Future<void> _registerEngineer() async {
     FocusScope.of(context).unfocus();
     setState(() => _isRegistering = true);
-
     try {
-      // 1. マスターデータとシーケンスIDを並列/一括取得
       final masterDataMap = await _fetchAllMasters();
-      final nextId = await _getNextSequenceId();
-
-      // 2. 保存データの構築
+      final nextId = await UIUtils.getNextSequenceId(_db);
       final dataToSave = _buildSaveData(nextId, masterDataMap);
-
-      // 3. Firestore保存
       await _db.collection('engineer').add(dataToSave);
-
       if (!mounted) return;
-
-      // 成功モーダルを表示
-      _showResultDialog(
+      UIUtils.showResultDialog(
+        context,
         title: '登録完了',
         message: '技術者情報の登録が完了しました。',
         isError: false,
@@ -87,11 +40,10 @@ class _EngineerRegistrationScreenState extends State<EngineerRegistrationScreen>
         },
       );
     } catch (e) {
-      debugPrint("Registration Error: $e");
       if (mounted) {
         setState(() => _isRegistering = false);
-        // 失敗モーダルを表示
-        _showResultDialog(
+        UIUtils.showResultDialog(
+          context,
           title: '登録失敗',
           message: '登録中にエラーが発生しました。\n$e',
           isError: true,
@@ -100,42 +52,26 @@ class _EngineerRegistrationScreenState extends State<EngineerRegistrationScreen>
     }
   }
 
-  /// 必要なマスタードキュメントを取得
   Future<Map<String, List<String>>> _fetchAllMasters() async {
     const docsToFetch = constData.masterDocs;
-    final refs = docsToFetch.map((id) => _db.collection('utilData').doc(id)).toList();
+    final refs =
+        docsToFetch.map((id) => _db.collection('utilData').doc(id)).toList();
     final snapshots = await Future.wait(refs.map((ref) => ref.get()));
-
     final Map<String, List<String>> result = {};
     for (var i = 0; i < docsToFetch.length; i++) {
       final data = snapshots[i].data();
-      result[docsToFetch[i]] = data?.values.firstWhere((v) => v is List, orElse: () => [])?.cast<String>() ?? [];
+      result[docsToFetch[i]] = data?.values
+              .firstWhere((v) => v is List, orElse: () => [])
+              ?.cast<String>() ??
+          [];
     }
     return result;
   }
-
-  /// シーケンスID取得
-  Future<int> _getNextSequenceId() async {
-    final counterRef = _db.collection('engineer').doc('sequenceNo');
-    return _db.runTransaction((transaction) async {
-      final snapshot = await transaction.get(counterRef);
-      // ここで snapshot.get('currentId') を行う。
-      // もし sequenceNo ドキュメントに別のフィールドがあると稀にエラーになる場合がある
-      final currentId = snapshot.exists ? (snapshot.get('currentId') as int) : 0;
-      final newId = currentId + 1;
-
-      transaction.set(counterRef, {'currentId': newId}, SetOptions(merge: true));
-      return newId;
-    });
-  }
-
-  /// 送信用Mapの組み立て
-  Map<String, dynamic> _buildSaveData(int id, Map<String, List<String>> masters) {
+  Map<String, dynamic> _buildSaveData(
+      int id, Map<String, List<String>> masters) {
     final d = widget.engineerData;
-
     Map<String, List<int>> convert(String key, String masterKey, String type) =>
         constData.convertDataToNumericArrays(d[key], masters[masterKey]!, type);
-
     final team = convert('team_role', 'team_role_item', 'years');
     final proc = convert('processes', 'process_item', 'level');
     final lang = convert('code_languages', 'code_languages_item', 'years');
@@ -143,11 +79,10 @@ class _EngineerRegistrationScreenState extends State<EngineerRegistrationScreen>
     final os = convert('os_experience', 'os_experience_item', 'years');
     final cloud = convert('cloud_technology', 'cloud_technology_item', 'years');
     final tool = convert('tool', 'tool_item', 'simple');
-
     return {
       'id': id,
       'first_name': d['first_name']?.toString() ?? '',
-      'last_name': d['last_name']?.toString() ?? '', // ← ここで値が取れているか再確認
+      'last_name': d['last_name']?.toString() ?? '',
       'age': int.tryParse(d['age']?.toString() ?? '') ?? 0,
       'nearest_station_line_name': d['nearest_station_line_name'] ?? '',
       'nearest_station_name': d['nearest_station_name'] ?? '',
@@ -174,148 +109,195 @@ class _EngineerRegistrationScreenState extends State<EngineerRegistrationScreen>
   Widget build(BuildContext context) {
     final d = widget.engineerData;
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFB),
       appBar: AppBar(
-        title: const Text('登録内容確認'),
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
-      ),
-      // 画面全体をColumnで構成
-      body: _isRegistering
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-        children: [
-          // 1. 固定ヘッダー部分
-          _buildHeader(),
-
-          // 2. スクロール可能部分（ここがExpandedなのが正解）
-          Expanded(
-            child: SingleChildScrollView(
-              // コンテンツが少なくてもスクロール可能にする設定
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildMainCard(d),
-                    _buildSkillSection('チーム役割', d['team_role']),
-                    _buildSkillSection('工程', d['processes']),
-                    _buildSkillSection('経験言語', d['code_languages']),
-                    _buildSkillSection('DB経験', d['db_experience']),
-                    _buildSkillSection('OS経験', d['os_experience']),
-                    _buildSkillSection('クラウド技術', d['cloud_technology']),
-                    _buildSkillSection('ツール', d['tool']),
-                    const SizedBox(height: 32),
-                    _buildActionButtons(),
-                    const SizedBox(height: 50), // 下に十分な余白
-                  ],
-                ),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        // スクロール時に色が変わるのを防ぐ
+        iconTheme: const IconThemeData(color: Colors.black87),
+        title: const Row(
+          children: [
+            Icon(Icons.fact_check_outlined, color: themeGreen, size: 24),
+            SizedBox(width: 12),
+            Text(
+              '登録内容の確認',
+              style: TextStyle(
+                color: Colors.black87,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
               ),
             ),
+          ],
+        ),
+        // 下部にうっすらと境界線を入れる
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1.0),
+          child: Container(
+            color: Colors.grey.withOpacity(0.15),
+            height: 1.0,
           ),
-        ],
+        ),
       ),
+      body: _isRegistering
+          ? const Center(child: CircularProgressIndicator(color: themeGreen))
+          : Column(
+              children: [
+                _buildHeader(),
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Center(
+                      child: Container(
+                        constraints: const BoxConstraints(maxWidth: 800),
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildMainCard(d),
+                            const SizedBox(height: 24),
+                            _buildSkillSection(
+                                'チーム役割', d['team_role'], Icons.groups_outlined),
+                            _buildSkillSection('工程', d['processes'],
+                                Icons.account_tree_outlined),
+                            _buildSkillSection('経験言語', d['code_languages'],
+                                Icons.code_rounded),
+                            _buildSkillSection('DB経験', d['db_experience'],
+                                Icons.storage_rounded),
+                            _buildSkillSection('OS経験', d['os_experience'],
+                                Icons.memory_rounded),
+                            _buildSkillSection('クラウド技術', d['cloud_technology'],
+                                Icons.cloud_queue_rounded),
+                            _buildSkillSection(
+                                'ツール', d['tool'], Icons.build_circle_outlined),
+                            const SizedBox(height: 40),
+                            _buildActionButtons(),
+                            const SizedBox(height: 50),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
     );
   }
 
   Widget _buildHeader() => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(16),
-    // 背景色と境界線の設定
-    decoration: BoxDecoration(
-      color: Colors.green[50],
-      border: const Border(
-        bottom: BorderSide(color: Colors.green, width: 1),
-      ),
-    ),
-    child: const Row( // Rowを使って横に並べる
-      children: [
-        Icon(Icons.info, color: Colors.orangeAccent), // 指定のアイコン
-        SizedBox(width: 12), // アイコンと文字の間の隙間
-        Expanded( // テキストが長くなっても折り返せるようにする
-          child: Text(
-            '以下の内容で登録しますか？',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.green,
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+        color: themeGreen.withOpacity(0.05),
+        child: const Row(
+          children: [
+            Icon(Icons.info_outline, color: themeGreen, size: 20),
+            SizedBox(width: 12),
+            Text(
+              '以下の内容で登録します。よろしいですか？',
+              style: TextStyle(
+                  fontSize: 14, fontWeight: FontWeight.bold, color: themeGreen),
             ),
-          ),
+          ],
         ),
-      ],
-    ),
-  );
+      );
 
-  Widget _buildMainCard(Map d) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(16),
+  Widget _buildMainCard(Map d) {
+    // 駅名の取得
+    String stationName = d['nearest_station_name']?.toString() ?? '';
+    // 空でなく、かつ末尾が「駅」で終わっていない場合のみ「駅」を付与
+    if (stationName.isNotEmpty && !stationName.endsWith('駅')) {
+      stationName += '駅';
+    }
+
+    return UIUtils.buildFormSection(
       child: Column(
         children: [
-          _infoRow('氏名', '${d['first_name']} ${d['last_name']}'),
-          _infoRow('年齢', '${d['age']} 歳'),
-          _infoRow('最寄', '${d['nearest_station_line_name'] ?? ''} ${d['nearest_station_name'] ?? ''}'),
+          _infoRow(Icons.person_outline, '氏名',
+              '${d['last_name']}　${d['first_name']}'),
+          const Divider(height: 24),
+          _infoRow(Icons.cake_outlined, '年齢', '${d['age']} 歳'),
+          const Divider(height: 24),
+          _infoRow(
+            Icons.train_outlined,
+            '最寄',
+            '${d['nearest_station_line_name'] ?? ''} $stationName',
+          ),
         ],
       ),
-    ),
-  );
-
-  Widget _infoRow(String label, String val) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4),
-    child: Row(children: [
-      SizedBox(width: 80, child: Text(label, style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold))),
-      Text(val, style: const TextStyle(fontSize: 16)),
-    ]),
-  );
-
-  Widget _buildSkillSection(String title, dynamic data) {
-    if (data is! Map || data.isEmpty) return const SizedBox.shrink();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(padding: const EdgeInsets.only(top: 16, bottom: 4), child: Text(title, style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold))),
-        const Divider(),
-        Wrap(spacing: 8, children: data.entries.map((e) => Chip(label: Text('${e.key} (${e.value})', style: const TextStyle(fontSize: 12)))).toList()),
-      ],
     );
   }
 
-  Widget _buildActionButtons() => Container(
-    padding: const EdgeInsets.all(16.0),
-    decoration: BoxDecoration(
-      color: Colors.white, // ボタンの背景を白くして、コンテンツと分ける
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.05),
-          blurRadius: 10,
-          offset: const Offset(0, -5), // 上方向に少し影をつける
-        ),
-      ],
-    ),
-    child: Column(
-      mainAxisSize: MainAxisSize.min, // 余計なスペースを取らない
-      children: [
-        SizedBox(
-          width: double.infinity,
-          height: 50,
-          child: ElevatedButton(
-            onPressed: _registerEngineer,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-              elevation: 0,
+  Widget _infoRow(IconData icon, String label, String val) => Row(
+        children: [
+          Icon(icon, size: 20, color: themeGreen),
+          const SizedBox(width: 12),
+          SizedBox(
+              width: 60,
+              child: Text(label,
+                  style: const TextStyle(
+                      color: Colors.black54, fontWeight: FontWeight.bold))),
+          Expanded(
+              child: Text(val,
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w500))),
+        ],
+      );
+
+  Widget _buildSkillSection(String title, dynamic data, IconData icon) {
+    if (data is! Map || data.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: UIUtils.buildFormSection(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 18, color: themeGreen),
+                const SizedBox(width: 8),
+                Text(title,
+                    style: const TextStyle(
+                        color: themeGreen, fontWeight: FontWeight.bold)),
+              ],
             ),
-            child: const Text('登録', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: data.entries
+                  .map((e) => Chip(
+                        label: Text('${e.key} (${e.value})',
+                            style: const TextStyle(fontSize: 12)),
+                        backgroundColor: Colors.white,
+                        side: const BorderSide(color: themeGreen, width: 0.5),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20)),
+                      ))
+                  .toList(),
+            ),
+          ],
         ),
-        const SizedBox(height: 8),
-        SizedBox(
-          width: double.infinity,
-          child: TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('修正', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+
+  Widget _buildActionButtons() => Column(
+        children: [
+          // 共通部品のボタンを使用
+          UIUtils.buildPrimaryButton(
+            label: 'この内容で登録する',
+            onPressed: _registerEngineer,
           ),
-        ),
-      ],
-    ),
-  );
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('入力をやり直す',
+                  style: TextStyle(
+                      color: Colors.black54, fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
+      );
 }

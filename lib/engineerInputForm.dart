@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:skill_search_model/utils/objectsUtils.dart';
+import 'package:skill_search_model/utils/uiUtils.dart';
 
 import 'common/messageManager.dart';
 import 'engineerRegistrationScreen.dart';
@@ -10,6 +12,24 @@ class EngineerInputForm extends StatefulWidget {
 }
 
 class _EngineerInputFormState extends State<EngineerInputForm> {
+  // フィールド名から対応するコントローラーを返すヘルパー関数
+  TextEditingController _getControllerByName(String name) {
+    switch (name) {
+      case '名':
+        return _firstNameController;
+      case '苗字':
+        return _lastNameController;
+      case '年齢':
+        return _ageController;
+      case '最寄沿線':
+        return _nearestStationLineNameController;
+      case '最寄駅':
+        return _nearestStationNameController;
+      default:
+        return TextEditingController(); // 基本的には到達しない
+    }
+  }
+
   final MessageManager messageManager = MessageManager();
   final _formKey = GlobalKey<FormState>();
   final _firstNameController = TextEditingController();
@@ -197,13 +217,6 @@ class _EngineerInputFormState extends State<EngineerInputForm> {
     return null;
   }
 
-  Future<void> _validateField(String fieldName, String? value) async {
-    final errorMessage = await _validateName(value, fieldName);
-    setState(() {
-      _validationResults[fieldName] = errorMessage;
-    });
-  }
-
   // 入力データをまとめる関数
   Map<String, dynamic> _getInputData() {
     return {
@@ -259,322 +272,293 @@ class _EngineerInputFormState extends State<EngineerInputForm> {
 
   @override
   Widget build(BuildContext context) {
+    // メインカラーを定義
+    const themeGreen = Color(0xFF2E7D32);
+
     return Scaffold(
+      // 背景色をMainShellと同じ薄いグレーに設定
+      backgroundColor: const Color(0xFFF8FAFB),
       appBar: AppBar(
-        backgroundColor: Colors.green,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Row(
+        // AppBarを白背景、影なしのスッキリしたデザインに変更
+        backgroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        // 戻るボタンのアイコン色を黒系に変更
+        iconTheme: const IconThemeData(color: Colors.black87),
+        title: const Row(
           children: [
-            const Padding(
-              padding: EdgeInsets.only(right: 8.0),
-              child: Icon(Icons.person_add, color: Colors.white, size: 24.0),
+            Padding(
+              padding: EdgeInsets.only(right: 12.0),
+              child:
+                  Icon(Icons.person_add_alt_1, color: themeGreen, size: 24.0),
             ),
-            const Text('技術者登録', style: TextStyle(color: Colors.white)),
+            Text(
+              '技術者登録',
+              style: TextStyle(
+                color: Colors.black87,
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+              ),
+            ),
           ],
         ),
         centerTitle: false,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: <Widget>[
-              Align(
-                alignment: Alignment.centerLeft, // 左寄せにする
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 0), // 下の余白をゼロに
-                  child: RichText(
-                    text: const TextSpan(
-                      style: TextStyle(color: Colors.black87, fontSize: 11), // フォントサイズを少し小さく
-                      children: <TextSpan>[
-                        TextSpan(
-                          text: '*',
-                          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                        ),
-                        TextSpan(text: ' は必須入力項目です'),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              // 名・苗字・年齢
-              Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: TextFormField(
-                      controller: _firstNameController,
-                      onChanged: (value) => _validateField('名', value),
-                      decoration: InputDecoration(
-                        label: _buildRequiredLabel('名'),
-                        prefixIcon: const Icon(Icons.person),
-                        errorText: _validationResults['名'],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 3,
-                    child: TextFormField(
-                      controller: _lastNameController,
-                      onChanged: (value) => _validateField('苗字', value),
-                      decoration: InputDecoration(
-                        label: _buildRequiredLabel('苗字'),
-                        prefixIcon: const Icon(Icons.person),
-                        errorText: _validationResults['苗字'],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 2, // flexを少し広げました
-                    child: TextFormField(
-                      controller: _ageController,
-                      onChanged: (value) => _validateField('年齢', value),
-                      decoration: InputDecoration(
-                        label: _buildRequiredLabel('年齢'),
-                        prefixIcon: const Icon(Icons.person_outline),
-                        errorText: _validationResults['年齢'],
-                      ),
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                ],
-              ),
-              // 最寄沿線・最寄駅
-              Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: TextFormField(
-                      controller: _nearestStationLineNameController,
-                      onChanged: (value) => _validateField('最寄沿線', value),
-                      decoration: InputDecoration(
-                        label: _buildRequiredLabel('最寄沿線'),
-                        prefixIcon: const Icon(Icons.linear_scale),
-                        errorText: _validationResults['最寄沿線'],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 3,
-                    child: TextFormField(
-                      controller: _nearestStationNameController,
-                      onChanged: (value) => _validateField('最寄駅', value),
-                      decoration: InputDecoration(
-                        label: _buildRequiredLabel('最寄駅'),
-                        prefixIcon: const Icon(Icons.train),
-                        errorText: _validationResults['最寄駅'],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              // 各 ExpansionTile (共通の構造のため一部省略しつつツールまで記載)
-              _buildExpansionTile('チーム役割', Icons.group, _teamRoles,
-                  _teamRolesChecked, _yearsCategories),
-              _buildExpansionTile('工程', Icons.account_tree, _processes,
-                  _processesChecked, _experienceCategories),
-              _buildExpansionTile('経験言語', Icons.developer_mode, _codeLanguages,
-                  _codeLanguagesChecked, _yearsCategories),
-              _buildExpansionTile('DB言語', Icons.storage, _dbExperience,
-                  _dbExperienceChecked, _yearsCategories),
-              _buildExpansionTile('OS言語', Icons.memory, _osExperience,
-                  _osExperienceChecked, _yearsCategories),
-              _buildExpansionTile('クラウド技術', Icons.cloud, _cloudTech,
-                  _cloudTechChecked, _yearsCategories),
-              _buildExpansionTile(
-                  'ツール', Icons.build, _tool, _toolChecked, _yearsCategories),
-
-              const SizedBox(height: 30),
-
-              // 修正の要：確認ボタン
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                onPressed: () async {
-                  // 1. エラーを一時的に保存するリスト
-                  List<String> errors = [];
-
-                  // 2. バリデーションを実行する内部関数
-                  Future<void> check(String label, String value) async {
-                    final msg = await _validateName(value, label);
-                    setState(() {
-                      _validationResults[label] = msg;
-                    });
-                    if (msg != null) {
-                      // ここで [名] を付与して追加
-                      errors.add('$msg');
-                    }
-                  }
-
-                  // 3. 全てのフィールドを「待機(await)」しながらチェック
-                  await check('名', _firstNameController.text);
-                  await check('苗字', _lastNameController.text);
-                  await check('年齢', _ageController.text);
-                  await check('最寄沿線', _nearestStationLineNameController.text);
-                  await check('最寄駅', _nearestStationNameController.text);
-
-                  // 4. 全てのチェックが終わった後に判定
-                  if (errors.isNotEmpty) {
-                    // エラーがあればモーダルを表示
-                    _showErrorDialog(errors);
-                  } else {
-                    // エラーがなければ初めて画面遷移
-                    final data = _getInputData();
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            EngineerRegistrationScreen(engineerData: data),
-                      ),
-                    );
-                  }
-                },
-                child: const Text('登録内容を確認する',
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              ),
-              const SizedBox(height: 50),
-            ],
-          ),
+        // 下に細い線を入れて境界をはっきりさせる
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1.0),
+          child: Container(color: Colors.grey.withOpacity(0.2), height: 1.0),
         ),
       ),
-    );
-  }
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+        child: Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 900), // Webで見やすく幅を制限
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 必須入力の注釈
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8.0, bottom: 16.0),
+                    child: RichText(
+                      text: const TextSpan(
+                        style: TextStyle(color: Colors.black54, fontSize: 12),
+                        children: [
+                          TextSpan(
+                              text: '*',
+                              style: TextStyle(
+                                  color: Colors.red,
+                                  fontWeight: FontWeight.bold)),
+                          TextSpan(text: ' は必須入力項目です'),
+                        ],
+                      ),
+                    ),
+                  ),
 
-  // リファクタリング用：共通の ExpansionTile ビルダー
-  Widget _buildExpansionTile(String title, IconData icon, List<String> items,
-      Map<String, String?> checkedMap, List<String> categories) {
-    return Container(
-      decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Colors.grey, width: 1.0))),
-      child: ExpansionTile(
-        title:
-            Row(children: [Icon(icon), const SizedBox(width: 8), Text(title)]),
-        children: items.map((item) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CheckboxListTile(
-                title: Text(item,
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-                value: checkedMap[item] != null,
-                onChanged: (val) =>
-                    setState(() => checkedMap[item] = val! ? '選択' : null),
-                controlAffinity: ListTileControlAffinity.leading,
-              ),
-              // チェックが入っている場合のみ横並びのラジオボタンを表示
-              if (checkedMap[item] != null)
-                Padding(
-                  padding: const EdgeInsets.only(left: 48.0, bottom: 8.0),
-                  // 左側にインデント
-                  child: Wrap(
-                    spacing: 8.0, // 横の間隔
-                    runSpacing: 0.0, // 縦の間隔
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: categories.map((cat) {
-                      return IntrinsicWidth(
-                        // 中身に合わせて最小限の幅にする
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                  // --- 基本情報カード ---
+                  UIUtils.buildFormSection(
+                    child: Column(
+                      children: [
+                        // 名・苗字・年齢
+                        Row(
                           children: [
-                            Radio<String>(
-                              value: cat,
-                              groupValue: checkedMap[item],
-                              materialTapTargetSize:
-                                  MaterialTapTargetSize.shrinkWrap, // 余白を詰める
-                              onChanged: (String? val) {
-                                if (val != null) {
-                                  setState(() => checkedMap[item] = val);
-                                }
-                              },
+                            Expanded(
+                              flex: 3,
+                              child: UIUtils.buildPrimaryTextField(
+                                controller: _lastNameController,
+                                label: '苗字',
+                                icon: Icons.person_outline,
+                                errorText: _validationResults['苗字'],
+                                onChanged: (val) {
+                                  setState(() {
+                                    // ObjectUtilsを使って一括判定
+                                    _validationResults['苗字'] =
+                                        ObjectUtils.validateField(val, '苗字');
+                                  });
+                                },
+                              ),
                             ),
-                            GestureDetector(
-                              onTap: () =>
-                                  setState(() => checkedMap[item] = cat),
-                              child: Text(
-                                cat,
-                                style:
-                                    const TextStyle(fontSize: 12.0), // 文字を少し小さく
+                            const SizedBox(width: 16),
+
+                            Expanded(
+                              flex: 3,
+                              child: UIUtils.buildPrimaryTextField(
+                                controller: _firstNameController,
+                                label: '名',
+                                icon: Icons.person_outline,
+                                errorText: _validationResults['名'],
+                                // setStateで管理しているエラーを渡す
+                                onChanged: (val) {
+                                  setState(() {
+                                    // ObjectUtilsを使って一括判定
+                                    _validationResults['名'] =
+                                        ObjectUtils.validateField(val, '名');
+                                  });
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              flex: 2,
+                              child: UIUtils.buildPrimaryTextField(
+                                controller: _ageController,
+                                label: '年齢',
+                                icon: Icons.cake_outlined,
+                                keyboardType: TextInputType.number,
+                                errorText: _validationResults['年齢'],
+                                onChanged: (val) {
+                                  setState(() {
+                                    // ObjectUtilsを使って一括判定
+                                    _validationResults['年齢'] =
+                                        ObjectUtils.validateField(val, '年齢');
+                                  });
+                                },
                               ),
                             ),
                           ],
                         ),
-                      );
-                    }).toList(),
+                        const SizedBox(height: 24),
+                        // 最寄沿線・最寄駅
+                        Row(
+                          children: [
+                            Expanded(
+                              child: UIUtils.buildPrimaryTextField(
+                                controller: _nearestStationLineNameController,
+                                label: '最寄沿線',
+                                icon: Icons.map_outlined,
+                                errorText: _validationResults['最寄沿線'],
+                                onChanged: (val) {
+                                  setState(() {
+                                    // ObjectUtilsを使って一括判定
+                                    _validationResults['最寄沿線'] =
+                                        ObjectUtils.validateField(val, '最寄沿線');
+                                  });
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: UIUtils.buildPrimaryTextField(
+                                controller: _nearestStationNameController,
+                                label: '最寄駅',
+                                icon: Icons.train_outlined,
+                                suffixText: '駅',
+                                errorText: _validationResults['最寄駅'],
+                                onChanged: (val) {
+                                  setState(() {
+                                    // ObjectUtilsを使って一括判定
+                                    _validationResults['最寄駅'] =
+                                        ObjectUtils.validateField(val, '最寄駅');
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-            ],
-          );
-        }).toList(),
-      ),
-    );
-  }
+                  const SizedBox(height: 24),
+                  // --- スキル・経験カード ---
+                  UIUtils.buildFormSection(
+                    child: Column(
+                      children: [
+                        UIUtils.buildSkillExpansionTile(
+                          title: 'チーム役割',
+                          icon: Icons.groups_outlined,
+                          items: _teamRoles,
+                          checkedMap: _teamRolesChecked,
+                          categories: _yearsCategories,
+                          onChanged: (item, val) =>
+                              setState(() => _teamRolesChecked[item] = val),
+                        ),
+                        UIUtils.buildSkillExpansionTile(
+                          title: '工程',
+                          icon: Icons.account_tree_outlined,
+                          items: _processes,
+                          checkedMap: _processesChecked,
+                          categories: _experienceCategories,
+                          onChanged: (item, val) =>
+                              setState(() => _processesChecked[item] = val),
+                        ),
+                        UIUtils.buildSkillExpansionTile(
+                          title: '経験言語',
+                          icon: Icons.code_rounded,
+                          items: _codeLanguages,
+                          checkedMap: _codeLanguagesChecked,
+                          categories: _yearsCategories,
+                          onChanged: (item, val) =>
+                              setState(() => _codeLanguagesChecked[item] = val),
+                        ),
+                        UIUtils.buildSkillExpansionTile(
+                          title: 'DB言語',
+                          icon: Icons.storage_rounded,
+                          items: _dbExperience,
+                          checkedMap: _dbExperienceChecked,
+                          categories: _yearsCategories,
+                          onChanged: (item, val) =>
+                              setState(() => _dbExperienceChecked[item] = val),
+                        ),
+                        UIUtils.buildSkillExpansionTile(
+                          title: 'OS',
+                          icon: Icons.memory_rounded,
+                          items: _osExperience,
+                          checkedMap: _osExperienceChecked,
+                          categories: _yearsCategories,
+                          onChanged: (item, val) =>
+                              setState(() => _osExperienceChecked[item] = val),
+                        ),
+                        UIUtils.buildSkillExpansionTile(
+                          title: 'クラウド技術',
+                          icon: Icons.cloud_queue_rounded,
+                          items: _cloudTech,
+                          checkedMap: _cloudTechChecked,
+                          categories: _yearsCategories,
+                          onChanged: (item, val) =>
+                              setState(() => _cloudTechChecked[item] = val),
+                        ),
+                        UIUtils.buildSkillExpansionTile(
+                          title: 'ツール',
+                          icon: Icons.build_circle_outlined,
+                          items: _tool,
+                          checkedMap: _toolChecked,
+                          categories: _yearsCategories,
+                          onChanged: (item, val) =>
+                              setState(() => _toolChecked[item] = val),
+                        ),
+                      ],
+                    ),
+                  ),
 
-  // エラーメッセージをモーダルで表示するための共通メソッド
-  void _showErrorDialog(List<String> errors) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        // ★ ここで背景色を指定（例：薄い赤）
-        surfaceTintColor: Colors.white,
-        // Material3の場合、これを白にすると背景色が綺麗に出ます
-        title: const Row(
-          children: [
-            Icon(Icons.error_outline, color: Colors.red),
-            SizedBox(width: 10),
-            Text(
-              '入力内容を確認してください',
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                  const SizedBox(height: 40),
+
+                  // 登録ボタン
+                  UIUtils.buildPrimaryButton(
+                    label: '登録内容を確認する',
+                    onPressed: () async {
+                      List<String> errors = [];
+
+                      // 【修正点】Mapのkeysではなく、チェックすべき必須項目を直接定義する
+                      final requiredFields = ['苗字', '名', '年齢', '最寄沿線', '最寄駅'];
+
+                      for (var fieldName in requiredFields) {
+                        // コントローラーから現在の値を直接取得してバリデーション
+                        final msg = ObjectUtils.validateField(
+                            _getControllerByName(fieldName).text, fieldName);
+
+                        // 画面上の赤字表示を更新
+                        setState(() => _validationResults[fieldName] = msg);
+
+                        // エラーメッセージがあればリストに追加
+                        if (msg != null) {
+                          errors.add(msg);
+                        }
+                      }
+
+                      if (errors.isNotEmpty) {
+                        // 一つでもエラーがあればダイアログ表示
+                        UIUtils.showErrorListDialog(context, errors);
+                      } else {
+                        // 全てOKなら遷移
+                        final data = _getInputData();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                EngineerRegistrationScreen(engineerData: data),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 80),
+                ],
+              ),
             ),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: errors
-                .map((e) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Text('・ $e',
-                          style: const TextStyle(
-                              fontSize: 14, color: Colors.black87)),
-                    ))
-                .toList(),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('閉じる',
-                style: TextStyle(color: Colors.black)), // ボタンも赤系に
-          ),
-        ],
-      ),
-    );
-  }
-
-  // 必須ラベルを作成するヘルパーメソッド
-  Widget _buildRequiredLabel(String label) {
-    return RichText(
-      text: TextSpan(
-        text: label,
-        style: const TextStyle(color: Colors.black87, fontSize: 16), // 通常の文字色
-        children: const [
-          TextSpan(
-            text: ' *',
-            style: TextStyle(
-                color: Colors.red, fontWeight: FontWeight.bold), // 赤いアスタリスク
-          ),
-        ],
       ),
     );
   }

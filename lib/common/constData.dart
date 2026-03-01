@@ -1,4 +1,10 @@
 class constData{
+  // システム全体のバージョン
+  static const String systemVersion = "1.0.0";
+  // エンジニアドキュメントのデータ構造バージョン
+  // (将来、保存形式を大幅に変えた際のデータ移行判定に使用)
+  static const double dataSchemaVersion = 1.0;
+
   static const String searchAgeSelectStringDefault = "" ;
   static const String searchAgeSelectStringUnder30 = "30歳以下" ;
   static const String searchAgeSelectStringUnder40 = "40歳以下" ;
