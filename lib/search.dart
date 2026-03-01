@@ -92,68 +92,72 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
     return Scaffold(
       appBar: AppBar(
-          automaticallyImplyLeading: false,
-          // 戻るボタンを非表示にする
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              Navigator.of(context)
-                  .popUntil((route) => route.isFirst); // トップまで戻る
-            },
-          ),
-          backgroundColor: Colors.green,
-          iconTheme: const IconThemeData(color: Colors.white),
-          title: new Flexible(
-            child: Column(
+        automaticallyImplyLeading: false, // デフォルトの戻るボタンを非表示
+        leadingWidth: 40,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+        ),
+        backgroundColor: Colors.lightGreenAccent.shade700,
+        iconTheme: const IconThemeData(color: Colors.white),
+        titleSpacing: 0, // 左寄せにするために余白をゼロに
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 1行目：アイコン、タイトル、件数
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Container(
-                        margin: const EdgeInsets.only(right: 10),
-                        child: Icon(
-                          Icons.pageview,
-                          color: Colors.white,
-                        )),
-                    Container(
-                        margin: const EdgeInsets.only(right: 10),
-                        child: const Text(
-                          constData.engineerSearch,
-                          style: TextStyle(color: Colors.white),
-                        )),
-                    Container(
-                        margin: const EdgeInsets.only(right: 15),
-                        child: Text(
-                          constData.engineerSearchNumber +
-                              constData.space +
-                              totalCount.toString() +
-                              constData.engineerSearchKen,
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 15),
-                        )),
-                  ],
+                const Icon(Icons.pageview, color: Colors.white, size: 22),
+                const SizedBox(width: 6),
+                Text(
+                  constData.engineerSearch, // 「技術者検索」
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18, // サイズを大きく
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                Container(
-                    margin: const EdgeInsets.only(left: 10),
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      "△：未経験から2年未満　○：3年から5年未満　◎：5年以上",
-                      style: const TextStyle(color: Colors.white, fontSize: 12),
-                    )),
+                const SizedBox(width: 10),
+                // 件数表示
+                Text(
+                  "$totalCount ${constData.engineerSearchKen}",
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ],
             ),
-          ),
-          actions: [
-            Container(
-              margin: const EdgeInsets.only(right: 40),
-              child: IconButton(
-                  onPressed: () => _detailSearchScreen(),
-                  icon: const Icon(
-                    Icons.filter_list_alt,
-                    size: 30,
-                    color: Colors.white,
-                  )),
+            // 2行目：補足説明
+            const Text(
+              "△:未経験~2年未満 ○:3~5年未満 ◎:5年以上",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 11, // 視認性のために少し拡大
+                letterSpacing: 0.5,
+              ),
             ),
-          ]),
+          ],
+        ),
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 10),
+            child: IconButton(
+              onPressed: () => _detailSearchScreen(),
+              icon: const Icon(
+                Icons.filter_list_alt,
+                size: 28,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
       body: FutureBuilder<Query>(
           // 1. まず非同期でgetStream()を実行し、Queryオブジェクトの完成を待つ
           future: getStream(),
@@ -496,6 +500,100 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           whereIn: resultSearchID,
         );
       }
+
+      // --- 追加：チーム役割経験の検索ロジック ---
+      ///チーム経験
+      if (searchConditions.getSearchSettingTeamRolesFlag == true) {
+        logger.i("チーム役割経験の検索を開始します");
+        logger.i("チーム役割経験の検索項目TeamRolesSearchItemChecked : ${searchConditions.getTeamRolesSearchItemChecked}");
+
+        //チームの検索マップ
+        Map<int, List<int>> teamRolesSearchMap = {};
+        //チームの検索マップ(処理上一時的にマップを格納する変数)
+        Map<int, List<int>> teamRolesSearchMapMini = {};
+        for (int i = 0; i < searchConditions.getTeamRolesSearchItemChecked!.length; i++) {
+          List<int> shearchTrueItemNum = []; //trueだった経験値を保持
+          bool trueFlg = false; //trueが一つでもあればtrue
+          for (int j = 0; j < searchConditions.getTeamRolesSearchItemChecked![i].length; j++) {
+            if (searchConditions.getTeamRolesSearchItemChecked![i][j] == true) {
+              trueFlg = true;
+              shearchTrueItemNum.add(j);
+            }
+          }
+          if (trueFlg) {
+            teamRolesSearchMapMini = {i: shearchTrueItemNum};
+            //チームの検索マップ{チーム番号(teamRoles):[経験値番号（team_role_years）]}
+            teamRolesSearchMap.addEntries(teamRolesSearchMapMini.entries);
+          }
+        }
+
+        // キーの取得
+        Iterable<int> teamRolesIterablekeys = teamRolesSearchMap.keys;
+        //teamRolesの検索条件だけで絞り込むためのリスト（arrayContainsAny）
+        List<int> teamRolesSearchKey = teamRolesIterablekeys.toList();
+
+        //チーム番号(teamRoles)の要素だけを抽出検索
+        if (teamRolesIterablekeys.isNotEmpty) {
+          //検索条件のteamRolesだけ（0:要件定義,1:基本情報,2:詳細,3:コーディング,4:単体,5:結合,6:保守）
+          logger.i("検索条件teamRoles: ${teamRolesSearchKey}");
+          query = query.where("team_role", arrayContainsAny: teamRolesSearchKey);
+        }
+
+        //team_roleはいけてそう下の
+
+        //検索に合致したIDリスト 新しく追加
+        List<String> resultSearchID = [];
+        // `await` を使って、クエリの実行結果を待つ
+        QuerySnapshot querySnapshot = await query.get();
+        // querySnapshotをループして１つづつドキュメントのデータを取り出す
+        for (var documentSnapshot in querySnapshot.docs) {
+          // documentSnapshotからデータ
+          var data = documentSnapshot.data() as Map<String, dynamic>;
+          //チームのリスト
+          var teamRolesList = data["team_role"];
+          //経験のリスト
+          var experienceList = data["team_role_years"];
+          //ドキュメントID
+          var documentId = documentSnapshot.id;
+          logger.i("teamRolesList: ${teamRolesList}");
+          logger.i("team_role_years: ${experienceList}");
+          logger.i("documentId: ${documentId}");
+          //teamRolesSearchMap　{チーム番号(teamRoles):List[経験値番号（team_role_years）]}
+          logger.i("teamRolesSearchMap: ${teamRolesSearchMap}");
+
+          for (int i = 0; i < teamRolesSearchKey.length; i++) {
+            //該当のteamRolesを見つける 該当のteamRolesは何番目のインデックスに入っているか
+            int teamRolesIndex = teamRolesList.indexOf(teamRolesSearchKey[i]);
+            //該当するteam_role_yearsのリストを作成
+            List<int> teamRolesSearchList = teamRolesSearchMap[teamRolesSearchKey[i]]!;
+            logger.i("teamRolesSearchList: ${teamRolesSearchList}");
+
+            //経験値が今度当てはまるか
+            for (int j = 0; j < teamRolesSearchList.length; j++) {
+              logger.i(
+                  "experienceList[teamRolesIndex]: ${experienceList[teamRolesIndex]}");
+              //チーム経験の条件が合致した場合、検索するドキュメントIDを検索用のIDリスト追加
+              if (experienceList[teamRolesIndex] == teamRolesSearchList[j]) {
+                logger.i("resultSearchIDに追加: ${documentId}");
+                resultSearchID.add(documentId);
+              }
+            }
+          }
+        }
+        logger.i("検索resultSearchID List: ${resultSearchID.toString()}");
+
+        // whereIn は空リストを渡すとエラーになるため、ダミーIDを入れる
+        if (resultSearchID.isEmpty) {
+          resultSearchID.add("No-ID-Found"); // 検索結果が0件になるID
+        }
+        // 最終的なIDリストでクエリを再構築する
+        query = engineer.where(
+          FieldPath.documentId,
+          whereIn: resultSearchID,
+        );
+      }
+      // --- チーム役割経験のロジック終了 ---
+
     }
     return query;
   }

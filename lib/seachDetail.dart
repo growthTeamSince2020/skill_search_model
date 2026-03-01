@@ -68,6 +68,12 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
   late List<bool> _processSearchChecked;
   //工程取得(子項目のチェック状態)リスト
   late List<List<bool>> _processSearchItemChecked;
+  //チーム役割取得(フラグ)リスト
+  late bool _searchSettingFlagTeamRoles;
+  //チーム役割取得(大項目のチェック状態)リスト
+  late List<bool> _teamRolesSearchChecked;
+  //チーム役割取得(子項目のチェック状態)リスト
+  late List<List<bool>> _teamRolesSearchItemChecked;
 
   @override
   void initState() {
@@ -118,9 +124,18 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
       ref.read(searchConditionsControllerProvider.notifier).setSearchSettingProcessFlag(true);
     }
 
+    //チーム経験(大項目チェックリスト、フラグ)の値の初期化　各フラグが全てfalse（初期値）だったらフラグをfalseにする
+    bool teamRolesSearchItemCheckedAllFalse = _teamRolesSearchItemChecked.every((row) => row.every((element) => element == false));
+    if(teamRolesSearchItemCheckedAllFalse) {
+      ref.read(searchConditionsControllerProvider.notifier).teamRolesClear();
+    }else{
+      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingTeamRolesFlag(true);
+    }
+
     //検索設定フラグの値の初期化　各フラグが全てfalseだったら検索設定フラグをfalseにする
     if(searchConditions.getAgeDropdownSelectedValue == 0 //年齢が初期値
         && searchConditions.getSearchSettingProcessFlag == false //工程経験が初期値
+        && searchConditions.getSearchSettingTeamRolesFlag == false //チーム経験が初期値
     ){
       ref.read(searchConditionsControllerProvider.notifier).clear();
     }else{
@@ -229,6 +244,12 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
     _processSearchChecked = searchConditions.getProcessSearchChecked!;
     //工程経験(小項目のチェック状態)の値を取得
     _processSearchItemChecked = searchConditions.getProcessSearchItemChecked!;
+    //チーム経験(フラグ)の値を取得
+    _searchSettingFlagTeamRoles = searchConditions.getSearchSettingTeamRolesFlag!;
+    //チーム経験(大項目のチェック状態)の値を取得
+    _teamRolesSearchChecked = searchConditions.getTeamRolesSearchChecked!;
+    //チーム経験(小項目のチェック状態)の値を取得
+    _teamRolesSearchItemChecked = searchConditions.getTeamRolesSearchItemChecked!;
 
 
     return Scaffold(
@@ -310,6 +331,7 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
                   Text('チーム役割'),
                 ],
               ),
+              initiallyExpanded: _searchSettingFlagTeamRoles, //trueだと自動で開く
               childrenPadding: EdgeInsets.only(left: 16.0, bottom: 16.0),
               children: _teamRoles.map((teamRoles) {
                 return Column(
@@ -317,17 +339,23 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
                   children: [
                     CheckboxListTile(
                       title: Text(teamRoles),
-                      value: _teamRolesChecked[teamRoles] != null,
+                      //value: _teamRolesChecked[teamRoles] != null,
+                      value: _teamRolesSearchChecked[_teamRoles.indexOf(teamRoles)],
                       onChanged: (value) {
                         setState(() {
-                          _teamRolesChecked[teamRoles] =
-                          value! ? '選択' : null;
+                          _teamRolesSearchChecked[_teamRoles.indexOf(teamRoles)] = value!;
+                          ref.read(searchConditionsControllerProvider.notifier).setTeamRolesSearchChecked(_teamRolesSearchChecked);
+                          if(value == false){
+                            //大項目がチェックがFALSEになったら小項目もFALSEにする
+                            _teamRolesSearchItemChecked[_teamRoles.indexOf(teamRoles)] = [false,false,false,false,false,false];
+                            ref.read(searchConditionsControllerProvider.notifier).setTeamRolesSearchItemChecked(_teamRolesSearchItemChecked);
+                          }
                         });
                       },
                       controlAffinity: ListTileControlAffinity.leading,
                       contentPadding: EdgeInsets.zero,
                     ),
-                    if (_teamRolesChecked[teamRoles] != null)
+                    if (_teamRolesSearchChecked[_teamRoles.indexOf(teamRoles)] == true)
                       Padding(
                         padding: const EdgeInsets.only(left: 16.0),
                         child: Wrap(
@@ -335,9 +363,13 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
                           children: _yearsCategories.map((yearsCategory) {
                             return CheckboxListTile(
                               title: Text(yearsCategory),
-                              value: false,
+                              value: _teamRolesSearchItemChecked[_teamRoles.indexOf(teamRoles)][_yearsCategories.indexOf(yearsCategory)],
                               onChanged: (value) {
                                 setState(() {
+                                  _teamRolesSearchItemChecked[_teamRoles.indexOf(teamRoles)][_yearsCategories.indexOf(yearsCategory)] = value!;
+                                  ref.read(searchConditionsControllerProvider.notifier).setTeamRolesSearchItemChecked(_teamRolesSearchItemChecked);
+                                  ref.read(searchConditionsControllerProvider.notifier).setSearchSettingTeamRolesFlag(true);
+                                  ref.read(searchConditionsControllerProvider.notifier).setSearchSettingFlag(true);
                                 });
                               },
                               controlAffinity: ListTileControlAffinity.leading,
