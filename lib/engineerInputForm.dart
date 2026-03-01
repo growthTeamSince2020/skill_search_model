@@ -347,6 +347,24 @@ class _EngineerInputFormState extends State<EngineerInputForm> {
                             Expanded(
                               flex: 3,
                               child: UIUtils.buildPrimaryTextField(
+                                controller: _lastNameController,
+                                label: '苗字',
+                                icon: Icons.person_outline,
+                                errorText: _validationResults['苗字'],
+                                onChanged: (val) {
+                                  setState(() {
+                                    // ObjectUtilsを使って一括判定
+                                    _validationResults['苗字'] =
+                                        ObjectUtils.validateField(val, '苗字');
+                                  });
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+
+                            Expanded(
+                              flex: 3,
+                              child: UIUtils.buildPrimaryTextField(
                                 controller: _firstNameController,
                                 label: '名',
                                 icon: Icons.person_outline,
@@ -357,23 +375,6 @@ class _EngineerInputFormState extends State<EngineerInputForm> {
                                     // ObjectUtilsを使って一括判定
                                     _validationResults['名'] =
                                         ObjectUtils.validateField(val, '名');
-                                  });
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              flex: 3,
-                              child: UIUtils.buildPrimaryTextField(
-                                controller: _lastNameController,
-                                label: '苗字',
-                                icon: Icons.person_outline,
-                                errorText: _validationResults['苗字'],
-                                onChanged: (val) {
-                                  setState(() {
-                                    // ObjectUtilsを使って一括判定
-                                    _validationResults['苗字'] =
-                                        ObjectUtils.validateField(val, '苗字');
                                   });
                                 },
                               ),
@@ -518,18 +519,29 @@ class _EngineerInputFormState extends State<EngineerInputForm> {
                     label: '登録内容を確認する',
                     onPressed: () async {
                       List<String> errors = [];
-                      // バリデーションの実行
-                      for (var entry in _validationResults.keys) {
+
+                      // 【修正点】Mapのkeysではなく、チェックすべき必須項目を直接定義する
+                      final requiredFields = ['苗字', '名', '年齢', '最寄沿線', '最寄駅'];
+
+                      for (var fieldName in requiredFields) {
+                        // コントローラーから現在の値を直接取得してバリデーション
                         final msg = ObjectUtils.validateField(
-                            _getControllerByName(entry).text, entry);
-                        setState(() => _validationResults[entry] = msg);
-                        if (msg != null) errors.add(msg);
+                            _getControllerByName(fieldName).text, fieldName);
+
+                        // 画面上の赤字表示を更新
+                        setState(() => _validationResults[fieldName] = msg);
+
+                        // エラーメッセージがあればリストに追加
+                        if (msg != null) {
+                          errors.add(msg);
+                        }
                       }
 
                       if (errors.isNotEmpty) {
-                        UIUtils.showErrorListDialog(
-                            context, errors); // 共通ダイアログへ
+                        // 一つでもエラーがあればダイアログ表示
+                        UIUtils.showErrorListDialog(context, errors);
                       } else {
+                        // 全てOKなら遷移
                         final data = _getInputData();
                         Navigator.push(
                           context,

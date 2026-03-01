@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'common/constData.dart'; // バージョン参照用に追加
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -13,24 +14,24 @@ class _LoginScreenState extends State<LoginScreen> {
 
   /// Googleアカウントでログイン (Web対応のポップアップ方式)
   Future<void> _loginWithGoogle() async {
+    // マウスホバー起因のエラーを防ぐため、連打を防止
+    if (_isLoading) return;
+
     setState(() => _isLoading = true);
     try {
-      // Firebase AuthのGoogleプロバイダーを作成
       final provider = GoogleAuthProvider();
-
-      // カスタムパラメータ（必要に応じて、毎回アカウント選択を強制させる設定など）
       provider.setCustomParameters({
         'prompt': 'select_account'
       });
 
-      // Web用のポップアップ認証を実行
       await FirebaseAuth.instance.signInWithPopup(provider);
-
-      // 成功後の画面切り替えは main.dart の authStateProvider が自動で行います
     } catch (e) {
-      _showSnackBar('Googleログイン失敗: $e');
-      debugPrint(e.toString());
+      if (mounted) {
+        _showSnackBar('Googleログイン失敗: $e');
+        debugPrint(e.toString());
+      }
     } finally {
+      // 画面が切り替わった後のsetStateによるエラーを防止
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -53,6 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                const SizedBox(height: 60), // 上部余白
                 // アプリロゴ（検索アイコン）
                 const Icon(Icons.search_rounded, size: 100, color: Colors.green),
                 const SizedBox(height: 16),
@@ -75,7 +77,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 // ログインボタン領域
                 if (_isLoading)
-                  const CircularProgressIndicator(color: Colors.green)
+                  const SizedBox(
+                    height: 100, // ローディング中も高さを維持してガタつきを防止
+                    child: Center(child: CircularProgressIndicator(color: Colors.green)),
+                  )
                 else
                   Column(
                     children: [
@@ -107,16 +112,28 @@ class _LoginScreenState extends State<LoginScreen> {
                           minimumSize: const Size(double.infinity, 54),
                           side: const BorderSide(color: Colors.black12),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30), // 丸みのあるデザイン
+                            borderRadius: BorderRadius.circular(30),
                           ),
                           backgroundColor: Colors.white,
-                          elevation: 2, // 軽く影をつけてボタンらしく
+                          elevation: 2,
                           shadowColor: Colors.black26,
                         ),
                       ),
                     ],
                   ),
-                const SizedBox(height: 100), // 下部の余白
+
+                const SizedBox(height: 100), // ボタン下の余白
+
+                // --- バージョン表示を追加 ---
+                Text(
+                  'Version ${constData.systemVersion}',
+                  style: const TextStyle(
+                    color: Colors.grey,
+                    fontSize: 12,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 20),
               ],
             ),
           ),

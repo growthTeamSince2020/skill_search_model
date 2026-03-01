@@ -17,24 +17,31 @@ class ObjectUtils {
    * @param item 判定対象のメニュー項目データ（'roleRequired' キーを含む Map）。
    * @return アクセス可能な場合は true、それ以外は false。
    */
-  static bool canAccessMenuItem(AppUser? user, Map<String, dynamic> item) {
-    // 管理者は全てのメニューに対してアクセス権を持つ
-    if (user?.role == 'admin') return true;
+  static bool canAccessMenuItem(AppUser? appUser, Map<String, dynamic> item) {
+    if (appUser == null) return false;
 
-    final String? required = item['roleRequired'];
+    final String? requiredRole = item['roleRequired'];
+    final String title = item['title'];
 
-    // 権限設定がない（null）項目は、全てのユーザーがアクセス可能
-    if (required == null) return true;
+    // 1. 管理者(admin)は何でもできる
+    if (appUser.role == 'admin') return true;
 
-    // インポート/エクスポート等の管理者専用項目の判定
-    if (required == 'admin') return user?.role == 'admin';
-
-    // 技術者登録等の編集者（または編集権限保持者）用項目の判定
-    if (required == 'editor') {
-      return user?.role == 'editor' || (user?.permissions['canEdit'] ?? false);
+    // 2. 「技術者登録」など、編集が必要な機能のチェック
+    // タイトルや特定のフラグに基づいて、canEdit 権限があるか確認
+    if (title == '技術者登録' || requiredRole == 'editor') {
+      if (appUser.permissions['canEdit'] == true) return true;
     }
 
-    // 上記の条件に合致しない場合はアクセスを拒否
+    // 3. 「エクスポート」機能のチェック
+    if (title == 'エクスポート' || title == 'インポート') {
+      if (appUser.permissions['canExport'] == true) return true;
+    }
+
+    // 4. ロールが直接一致する場合 (editorなど)
+    if (requiredRole == null || appUser.role == requiredRole) {
+      return true;
+    }
+
     return false;
   }
 

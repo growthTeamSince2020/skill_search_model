@@ -26,7 +26,7 @@ class _EngineerRegistrationScreenState
     setState(() => _isRegistering = true);
     try {
       final masterDataMap = await _fetchAllMasters();
-      final nextId = await _getNextSequenceId();
+      final nextId = await UIUtils.getNextSequenceId(_db);
       final dataToSave = _buildSaveData(nextId, masterDataMap);
       await _db.collection('engineer').add(dataToSave);
       if (!mounted) return;
@@ -67,20 +67,6 @@ class _EngineerRegistrationScreenState
     }
     return result;
   }
-
-  Future<int> _getNextSequenceId() async {
-    final counterRef = _db.collection('engineer').doc('sequenceNo');
-    return _db.runTransaction((transaction) async {
-      final snapshot = await transaction.get(counterRef);
-      final currentId =
-          snapshot.exists ? (snapshot.get('currentId') as int) : 0;
-      final newId = currentId + 1;
-      transaction.set(
-          counterRef, {'currentId': newId}, SetOptions(merge: true));
-      return newId;
-    });
-  }
-
   Map<String, dynamic> _buildSaveData(
       int id, Map<String, List<String>> masters) {
     final d = widget.engineerData;
@@ -227,7 +213,7 @@ class _EngineerRegistrationScreenState
       child: Column(
         children: [
           _infoRow(Icons.person_outline, '氏名',
-              '${d['first_name']} ${d['last_name']}'),
+              '${d['last_name']}　${d['first_name']}'),
           const Divider(height: 24),
           _infoRow(Icons.cake_outlined, '年齢', '${d['age']} 歳'),
           const Divider(height: 24),
