@@ -97,7 +97,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
-            Navigator.of(context).pop();
+            Navigator.of(context)
+                .popUntil((route) => route.isFirst);
           },
         ),
         backgroundColor: Colors.lightGreenAccent.shade700,
@@ -158,445 +159,285 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           ),
         ],
       ),
-      body: FutureBuilder<Query>(
-          // 1. まず非同期でgetStream()を実行し、Queryオブジェクトの完成を待つ
+      body: FutureBuilder<List<DocumentSnapshot>>(
+        // 1. アプリ側でフィルタリング済みのリストを取得する
           future: getStream(),
-          builder: (context, queryFutureSnapshot) {
-            // Case 1: クエリを構築中（待機中）の場合
-            if (queryFutureSnapshot.connectionState ==
-                ConnectionState.waiting) {
-              // ローディングインジケーターを表示
+          builder: (context, snapshot) {
+            // Case 1: データ取得中（待機中）の場合
+            if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
 
-            // Case 2: クエリ構築中にエラーが発生した場合
-            if (queryFutureSnapshot.hasError) {
+            // Case 2: エラーが発生した場合
+            if (snapshot.hasError) {
               return Center(
-                  child: Text('エラーが発生しました: ${queryFutureSnapshot.error}'));
+                  child: Text('データの取得中にエラーが発生しました: ${snapshot.error}'));
             }
 
-            // Case 3: クエリの構築が完了したが、何らかの理由でデータがない場合
-            if (!queryFutureSnapshot.hasData) {
-              return const Center(child: Text("検索条件を待っています..."));
+            // Case 3: データがない、またはリストが空の場合
+            final docs = snapshot.data;
+            if (docs == null || docs.isEmpty) {
+              // 検索件数を0に更新
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted && totalCount != 0) {
+                  setState(() => totalCount = 0);
+                }
+              });
+              return const Center(child: Text("該当するエンジニアが見つかりませんでした。"));
             }
 
-            // Case 4: クエリの構築が成功した場合
-            // 取得したQueryオブジェクトを使って、ここからStreamBuilderを構築する
-            final Query query = queryFutureSnapshot.data!;
-            return StreamBuilder<QuerySnapshot>(
-                stream: query.snapshots(),
-                builder: (context, streamSnapshot) {
-                  // データストリームを待っている間
-                  if (streamSnapshot.connectionState ==
-                      ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+            // 取得できた件数を totalCount に反映（AppBar表示用）
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && totalCount != docs.length) {
+                setState(() => totalCount = docs.length);
+              }
+            });
 
-                  // ストリームでエラーが発生した場合
-                  if (streamSnapshot.hasError) {
-                    return Center(
-                        child: Text(
-                            'データの取得中にエラーが発生しました: ${streamSnapshot.error}'));
-                  }
+            // Case 4: データが正常に取得できた場合、リストを表示する
+            return ListView.builder(
+              itemCount: docs.length,
+              itemBuilder: (context, index) {
+                // 各ドキュメントのデータを取得
+                final doc = docs[index];
+                final data = doc.data() as Map<String, dynamic>;
 
-                  // データがない、またはドキュメントが0件の場合
-                  if (!streamSnapshot.hasData ||
-                      streamSnapshot.data!.docs.isEmpty) {
-                    return const Center(child: Text("該当するエンジニアが見つかりませんでした。"));
-                  }
-
-                  // データが正常に取得できた場合、リストを表示する（ここからが元のUI部分）
-                  final snapshot = streamSnapshot; // 元のコードに合わせて変数名を調整
-
-                  return ListView.builder(
-                    itemCount: snapshot.data?.size as int,
-                    //検索total数の更新
-                    semanticChildCount: totalCount = snapshot.data?.size as int,
-                    itemBuilder: (context, index) {
-                      return Card(
-                        color: Colors.white,
-                        shadowColor: Colors.black,
-                        child: ListTile(
-                          iconColor: Colors.grey,
-                          title: Text(
-                            snapshot.data!.docs[index]['last_name'] +
-                                snapshot.data?.docs[index]['first_name'] +
-                                constData.space +
-                                constData.rightBracket +
-                                snapshot.data!.docs[index]['age'].toString() +
-                                constData.age +
-                                constData.leftBracket,
-                            style: const TextStyle(fontSize: 20),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              //最寄駅
-                              Row(
-                                children: [
-                                  const Icon(Icons.linear_scale),
-                                  Container(
-                                      margin: const EdgeInsets.all(3),
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: Colors.blue),
-                                      ),
-                                      child: const Text(constData.space +
-                                          constData.engineerSearchStation1 +
-                                          constData.space)),
-                                  new Flexible(
-                                    child: Text(constData.space +
-                                        snapshot.data?.docs[index]
-                                            ['nearest_station_line_name'] +
-                                        constData.space +
-                                        snapshot.data?.docs[index]
-                                            ['nearest_station_name'] +
-                                        '駅'),
-                                  ),
-                                ],
-                              ),
-                              //チーム役割
-                              Row(
-                                children: [
-                                  const Icon(Icons.group),
-                                  Container(
-                                      margin: const EdgeInsets.all(3),
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: Colors.blue),
-                                      ),
-                                      child: const Text(constData.space +
-                                          constData.engineerSearchTeamRole1 +
-                                          constData.space)),
-                                  new Flexible(
-                                    child: Text(constData.space +
-                                        getUtilDateListGetterSimpleEvaluation(
-                                                snapshot.data?.docs[index]
-                                                    ['team_role'],
-                                                teamRoleItem,
-                                                snapshot.data?.docs[index]
-                                                    ['team_role_years'],
-                                                false)
-                                            .toString()),
-                                  ),
-                                ],
-                              ),
-                              //工程経験
-                              Row(
-                                children: [
-                                  const Icon(Icons.account_tree),
-                                  Container(
-                                      margin: const EdgeInsets.all(3),
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: Colors.blue),
-                                      ),
-                                      child: const Text(constData.space +
-                                          constData.engineerSearchProcess1 +
-                                          constData.space)),
-                                  new Flexible(
-                                    child: Text(constData.space +
-                                        getUtilDateListGetterSimpleEvaluation(
-                                                snapshot.data?.docs[index]
-                                                    ['process'],
-                                                processItem,
-                                                snapshot.data?.docs[index]
-                                                    ['process_experience'],
-                                                true)
-                                            .toString()),
-                                  ),
-                                ],
-                              ),
-                              //経験言語
-                              Row(
-                                children: [
-                                  const Icon(Icons.developer_mode),
-                                  Container(
-                                      margin: const EdgeInsets.all(3),
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: Colors.blue),
-                                      ),
-                                      child: const Text(constData.space +
-                                          constData
-                                              .engineerSearchCodeLanguages1 +
-                                          constData.space)),
-                                  new Flexible(
-                                    child: Text(constData.space +
-                                        getUtilDateListGetterSimpleEvaluation(
-                                                snapshot.data?.docs[index]
-                                                    ['code_languages'],
-                                                codeLanguagesItem,
-                                                snapshot.data?.docs[index]
-                                                    ['code_languages_years'],
-                                                false)
-                                            .toString()),
-                                  ),
-                                ],
-                              ),
-                              //DB言語
-                              Row(
-                                children: [
-                                  const Icon(Icons.storage),
-                                  Container(
-                                      margin: const EdgeInsets.all(3),
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: Colors.blue),
-                                      ),
-                                      child: const Text(constData.space +
-                                          constData.engineerSearchDb1 +
-                                          constData.space)),
-                                  new Flexible(
-                                    child: Text(constData.space +
-                                        getUtilDateListGetterSimpleEvaluation(
-                                                snapshot.data?.docs[index]
-                                                    ['db_experience'],
-                                                dbExperienceItem,
-                                                snapshot.data?.docs[index]
-                                                    ['db_experience_years'],
-                                                false)
-                                            .toString()),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          leading: const Icon(Icons.account_circle),
-                          trailing: IconButton(
-                              onPressed: () => _engineerDetailScreen(),
-                              icon: const Icon(
-                                Icons.article,
-                                size: 30,
-                              )),
-                          onTap: () {
-                            print('タップされました');
-                          },
+                return Card(
+                  color: Colors.white,
+                  shadowColor: Colors.black,
+                  child: ListTile(
+                    iconColor: Colors.grey,
+                    title: Text(
+                      (data['last_name'] ?? '') +
+                          (data['first_name'] ?? '') +
+                          constData.space +
+                          constData.rightBracket +
+                          (data['age']?.toString() ?? '') +
+                          constData.age +
+                          constData.leftBracket,
+                      style: const TextStyle(fontSize: 20),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        //最寄駅
+                        Row(
+                          children: [
+                            const Icon(Icons.linear_scale),
+                            Container(
+                                margin: const EdgeInsets.all(3),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.blue),
+                                ),
+                                child: const Text(constData.space +
+                                    constData.engineerSearchStation1 +
+                                    constData.space)),
+                            Flexible(
+                              child: Text(constData.space +
+                                  (data['nearest_station_line_name'] ?? '') +
+                                  constData.space +
+                                  (data['nearest_station_name'] ?? '') +
+                                  '駅'),
+                            ),
+                          ],
                         ),
-                      );
+                        //チーム役割
+                        Row(
+                          children: [
+                            const Icon(Icons.group),
+                            Container(
+                                margin: const EdgeInsets.all(3),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.blue),
+                                ),
+                                child: const Text(constData.space +
+                                    constData.engineerSearchTeamRole1 +
+                                    constData.space)),
+                            Flexible(
+                              child: Text(constData.space +
+                                  getUtilDateListGetterSimpleEvaluation(
+                                      data['team_role'],
+                                      teamRoleItem,
+                                      data['team_role_years'],
+                                      false)
+                                      .toString()),
+                            ),
+                          ],
+                        ),
+                        //工程経験
+                        Row(
+                          children: [
+                            const Icon(Icons.account_tree),
+                            Container(
+                                margin: const EdgeInsets.all(3),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.blue),
+                                ),
+                                child: const Text(constData.space +
+                                    constData.engineerSearchProcess1 +
+                                    constData.space)),
+                            Flexible(
+                              child: Text(constData.space +
+                                  getUtilDateListGetterSimpleEvaluation(
+                                      data['process'],
+                                      processItem,
+                                      data['process_experience'],
+                                      true)
+                                      .toString()),
+                            ),
+                          ],
+                        ),
+                        //経験言語
+                        Row(
+                          children: [
+                            const Icon(Icons.developer_mode),
+                            Container(
+                                margin: const EdgeInsets.all(3),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.blue),
+                                ),
+                                child: const Text(constData.space +
+                                    constData.engineerSearchCodeLanguages1 +
+                                    constData.space)),
+                            Flexible(
+                              child: Text(constData.space +
+                                  getUtilDateListGetterSimpleEvaluation(
+                                      data['code_languages'],
+                                      codeLanguagesItem,
+                                      data['code_languages_years'],
+                                      false)
+                                      .toString()),
+                            ),
+                          ],
+                        ),
+                        //DB言語
+                        Row(
+                          children: [
+                            const Icon(Icons.storage),
+                            Container(
+                                margin: const EdgeInsets.all(3),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.blue),
+                                ),
+                                child: const Text(constData.space +
+                                    constData.engineerSearchDb1 +
+                                    constData.space)),
+                            Flexible(
+                              child: Text(constData.space +
+                                  getUtilDateListGetterSimpleEvaluation(
+                                      data['db_experience'],
+                                      dbExperienceItem,
+                                      data['db_experience_years'],
+                                      false)
+                                      .toString()),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    leading: const Icon(Icons.account_circle),
+                    trailing: IconButton(
+                        onPressed: () => _engineerDetailScreen(),
+                        icon: const Icon(
+                          Icons.article,
+                          size: 30,
+                        )),
+                    onTap: () {
+                      print('タップされました');
                     },
-                  );
-                });
+                  ),
+                );
+              },
+            );
           }),
     );
   }
 
-  /* 検索条件を指定してクエリを作成して返す
-   * @param なし
-   * @return 検索結果
-  */
-  Future<Query> getStream() async {
-    // searchConProviderのインスタンスを取得
+  Future<List<DocumentSnapshot>> getStream() async {
     searchConditions = ref.watch(searchConditionsControllerProvider);
-    logger.i(
-        "検索側　getSearchSettingFlag: ${searchConditions.getSearchSettingFlag}");
-    logger.i(
-        "検索側　getAgeDropdownSelectedValue: ${searchConditions.getAgeDropdownSelectedValue}");
-    logger.i(
-        "検索側　getSearchSettingProcessFlag: ${searchConditions.getSearchSettingProcessFlag}");
 
-    // 検索条件を元にクエリを作成
-    Query query = engineer;
-    //編集フラグがNullの場合、初期化
+    // 1. 基本となるクエリ（年齢などの単純なフィルタのみFirestoreで行う）
+    Query query = engineer.where(FieldPath.documentId, isNotEqualTo: "sequenceNo");
+
     if (searchConditions.getSearchSettingFlag == true) {
-      ///年齢
+      // 年齢条件の適用
       if (searchConditions.getAgeDropdownSelectedValue! > 0) {
-        int searchNum = 0;
-        logger.i(
-            "ageDropdownSelectedValue: ${searchConditions.getAgeDropdownSelectedValue}");
-        if (searchConditions.getAgeDropdownSelectedValue == 1) {
-          searchNum = 30;
-        } else if (searchConditions.getAgeDropdownSelectedValue == 2) {
-          searchNum = 40;
-        } else if (searchConditions.getAgeDropdownSelectedValue == 3) {
-          searchNum = 50;
-        }
+        int searchNum = (searchConditions.getAgeDropdownSelectedValue == 1) ? 30 :
+        (searchConditions.getAgeDropdownSelectedValue == 2) ? 40 : 50;
         query = query.where("age", isLessThanOrEqualTo: searchNum);
       }
-
-      ///工程経験
-      if (searchConditions.getSearchSettingProcessFlag == true) {
-
-        //工程の検索マップ
-        Map<int, List<int>> processSearchMap = {};
-        //工程の検索マップ(処理上一時的にマップを格納する変数)
-        Map<int, List<int>> processSearchMapMini = {};
-        for (int i = 0; i < searchConditions.getProcessSearchItemChecked!.length; i++) {
-          List<int> shearchTrueItemNum = []; //trueだった経験値を保持
-          bool trueFlg = false; //trueが一つでもあればtrue
-          for (int j = 0; j < searchConditions.getProcessSearchItemChecked![i].length; j++) {
-            if (searchConditions.getProcessSearchItemChecked![i][j] == true) {
-              trueFlg = true;
-              shearchTrueItemNum.add(j);
-            }
-          }
-          if (trueFlg) {
-            processSearchMapMini = {i: shearchTrueItemNum};
-            //工程の検索マップ{工程番号(process):[経験値番号（process_experience）]}
-            processSearchMap.addEntries(processSearchMapMini.entries);
-          }
-        }
-
-        // キーの取得
-        Iterable<int> processIterablekeys = processSearchMap.keys;
-        //processの検索条件だけで絞り込むためのリスト（arrayContainsAny）
-        List<int> processSearchKey = processIterablekeys.toList();
-
-        //工程番号(process)の要素だけを抽出検索
-        if (processIterablekeys.isNotEmpty) {
-          //検索条件のprocessだけ（0:要件定義,1:基本情報,2:詳細,3:コーディング,4:単体,5:結合,6:保守）
-          logger.i("検索条件process: ${processSearchKey}");
-          query = query.where("process", arrayContainsAny: processSearchKey);
-        }
-
-        //検索に合致したIDリスト 新しく追加
-        List<String> resultSearchID = [];
-        // `await` を使って、クエリの実行結果を待つ
-        QuerySnapshot querySnapshot = await query.get();
-        // querySnapshotをループして１つづつドキュメントのデータを取り出す
-        for (var documentSnapshot in querySnapshot.docs) {
-          // documentSnapshotからデータ
-          var data = documentSnapshot.data() as Map<String, dynamic>;
-          //工程のリスト
-          var processList = data["process"];
-          //経験のリスト
-          var experienceList = data["process_experience"];
-          //ドキュメントID
-          var documentId = documentSnapshot.id;
-          logger.i("processList: ${processList}");
-          logger.i("process_experience: ${experienceList}");
-          logger.i("documentId: ${documentId}");
-          //processSearchMap　{工程番号(process):List[経験値番号（process_experience）]}
-          logger.i("processSearchMap: ${processSearchMap}");
-
-          for (int i = 0; i < processSearchKey.length; i++) {
-            //該当のprocessを見つける 該当のprocessは何番目のインデックスに入っているか
-            int processIndex = processList.indexOf(processSearchKey[i]);
-            //該当するprocess_experienceのリストを作成
-            List<int> processSearchList = processSearchMap[processSearchKey[i]]!;
-            logger.i("processSearchList: ${processSearchList}");
-
-            //経験値が今度当てはまるか
-            for (int j = 0; j < processSearchList.length; j++) {
-              logger.i(
-                  "experienceList[processIndex]: ${experienceList[processIndex]}");
-              //工程経験の条件が合致した場合、検索するドキュメントIDを検索用のIDリスト追加
-              if (experienceList[processIndex] == processSearchList[j]) {
-                  logger.i("resultSearchIDに追加: ${documentId}");
-                  resultSearchID.add(documentId);
-              }
-            }
-          }
-        }
-        logger.i("検索resultSearchID List: ${resultSearchID.toString()}");
-
-        // whereIn は空リストを渡すとエラーになるため、ダミーIDを入れる
-        if (resultSearchID.isEmpty) {
-          resultSearchID.add("No-ID-Found"); // 検索結果が0件になるID
-        }
-        // 最終的なIDリストでクエリを再構築する
-        query = engineer.where(
-          FieldPath.documentId,
-          whereIn: resultSearchID,
-        );
-      }
-
-      // --- 追加：チーム役割経験の検索ロジック ---
-      ///チーム経験
-      if (searchConditions.getSearchSettingTeamRolesFlag == true) {
-        logger.i("チーム役割経験の検索を開始します");
-        logger.i("チーム役割経験の検索項目TeamRolesSearchItemChecked : ${searchConditions.getTeamRolesSearchItemChecked}");
-
-        //チームの検索マップ
-        Map<int, List<int>> teamRolesSearchMap = {};
-        //チームの検索マップ(処理上一時的にマップを格納する変数)
-        Map<int, List<int>> teamRolesSearchMapMini = {};
-        for (int i = 0; i < searchConditions.getTeamRolesSearchItemChecked!.length; i++) {
-          List<int> shearchTrueItemNum = []; //trueだった経験値を保持
-          bool trueFlg = false; //trueが一つでもあればtrue
-          for (int j = 0; j < searchConditions.getTeamRolesSearchItemChecked![i].length; j++) {
-            if (searchConditions.getTeamRolesSearchItemChecked![i][j] == true) {
-              trueFlg = true;
-              shearchTrueItemNum.add(j);
-            }
-          }
-          if (trueFlg) {
-            teamRolesSearchMapMini = {i: shearchTrueItemNum};
-            //チームの検索マップ{チーム番号(teamRoles):[経験値番号（team_role_years）]}
-            teamRolesSearchMap.addEntries(teamRolesSearchMapMini.entries);
-          }
-        }
-
-        // キーの取得
-        Iterable<int> teamRolesIterablekeys = teamRolesSearchMap.keys;
-        //teamRolesの検索条件だけで絞り込むためのリスト（arrayContainsAny）
-        List<int> teamRolesSearchKey = teamRolesIterablekeys.toList();
-
-        //チーム番号(teamRoles)の要素だけを抽出検索
-        if (teamRolesIterablekeys.isNotEmpty) {
-          //検索条件のteamRolesだけ（0:要件定義,1:基本情報,2:詳細,3:コーディング,4:単体,5:結合,6:保守）
-          logger.i("検索条件teamRoles: ${teamRolesSearchKey}");
-          query = query.where("team_role", arrayContainsAny: teamRolesSearchKey);
-        }
-
-        //team_roleはいけてそう下の
-
-        //検索に合致したIDリスト 新しく追加
-        List<String> resultSearchID = [];
-        // `await` を使って、クエリの実行結果を待つ
-        QuerySnapshot querySnapshot = await query.get();
-        // querySnapshotをループして１つづつドキュメントのデータを取り出す
-        for (var documentSnapshot in querySnapshot.docs) {
-          // documentSnapshotからデータ
-          var data = documentSnapshot.data() as Map<String, dynamic>;
-          //チームのリスト
-          var teamRolesList = data["team_role"];
-          //経験のリスト
-          var experienceList = data["team_role_years"];
-          //ドキュメントID
-          var documentId = documentSnapshot.id;
-          logger.i("teamRolesList: ${teamRolesList}");
-          logger.i("team_role_years: ${experienceList}");
-          logger.i("documentId: ${documentId}");
-          //teamRolesSearchMap　{チーム番号(teamRoles):List[経験値番号（team_role_years）]}
-          logger.i("teamRolesSearchMap: ${teamRolesSearchMap}");
-
-          for (int i = 0; i < teamRolesSearchKey.length; i++) {
-            //該当のteamRolesを見つける 該当のteamRolesは何番目のインデックスに入っているか
-            int teamRolesIndex = teamRolesList.indexOf(teamRolesSearchKey[i]);
-            //該当するteam_role_yearsのリストを作成
-            List<int> teamRolesSearchList = teamRolesSearchMap[teamRolesSearchKey[i]]!;
-            logger.i("teamRolesSearchList: ${teamRolesSearchList}");
-
-            //経験値が今度当てはまるか
-            for (int j = 0; j < teamRolesSearchList.length; j++) {
-              logger.i(
-                  "experienceList[teamRolesIndex]: ${experienceList[teamRolesIndex]}");
-              //チーム経験の条件が合致した場合、検索するドキュメントIDを検索用のIDリスト追加
-              if (experienceList[teamRolesIndex] == teamRolesSearchList[j]) {
-                logger.i("resultSearchIDに追加: ${documentId}");
-                resultSearchID.add(documentId);
-              }
-            }
-          }
-        }
-        logger.i("検索resultSearchID List: ${resultSearchID.toString()}");
-
-        // whereIn は空リストを渡すとエラーになるため、ダミーIDを入れる
-        if (resultSearchID.isEmpty) {
-          resultSearchID.add("No-ID-Found"); // 検索結果が0件になるID
-        }
-        // 最終的なIDリストでクエリを再構築する
-        query = engineer.where(
-          FieldPath.documentId,
-          whereIn: resultSearchID,
-        );
-      }
-      // --- チーム役割経験のロジック終了 ---
-
     }
-    return query;
+
+    // 2. この時点でのデータを一旦すべて取得
+    QuerySnapshot allDocs = await query.get();
+
+    // 3. 詳細な条件（工程・チーム役割）でアプリ側でフィルタリング
+    List<DocumentSnapshot> filteredList = allDocs.docs.where((doc) {
+      var data = doc.data() as Map<String, dynamic>;
+
+      // 詳細検索がオフなら全て通す
+      if (searchConditions.getSearchSettingFlag != true) return true;
+
+      // --- 工程経験の判定 ---
+      bool processMatch = true;
+      if (searchConditions.getSearchSettingProcessFlag == true) {
+        processMatch = _checkExperience(
+          userItems: data["process"] ?? [],
+          userYears: data["process_experience"] ?? [],
+          searchSettings: searchConditions.getProcessSearchItemChecked!,
+        );
+      }
+
+      // --- チーム役割の判定 ---
+      bool teamRoleMatch = true;
+      if (searchConditions.getSearchSettingTeamRolesFlag == true) {
+        teamRoleMatch = _checkExperience(
+          userItems: data["team_role"] ?? [],
+          userYears: data["team_role_years"] ?? [],
+          searchSettings: searchConditions.getTeamRolesSearchItemChecked!,
+        );
+      }
+
+      // AND検索（両方のフラグがONなら両方満たす必要がある）
+      return processMatch && teamRoleMatch;
+    }).toList();
+
+    return filteredList;
   }
+
+  /// 経験値判定用の共通ヘルパーメソッド
+  bool _checkExperience({
+    required List<dynamic> userItems,
+    required List<dynamic> userYears,
+    required List<List<bool>> searchSettings,
+  }) {
+    bool hasCondition = false;
+
+    for (int i = 0; i < searchSettings.length; i++) {
+      for (int j = 0; j < searchSettings[i].length; j++) {
+        if (searchSettings[i][j] == true) {
+          hasCondition = true; // 何か一つでもチェックされている
+
+          // ユーザーがその項目(i)を持っていて、かつ経験年数(j)が一致するか
+          int userIdx = userItems.indexOf(i);
+          if (userIdx != -1 && userIdx < userYears.length) {
+            if (userYears[userIdx] == j) {
+              return true; // 条件の一つに合致したのでOK
+            }
+          }
+        }
+      }
+    }
+
+    // 検索条件が一つも設定されていない場合は「マッチ」とみなす、
+    // 設定されているのに一度も合致しなかった場合は「不一致」
+    return !hasCondition;
+  }
+
 
   /* UtilDateのリストから文字列取得して各Listにして返す
    * @param なし
