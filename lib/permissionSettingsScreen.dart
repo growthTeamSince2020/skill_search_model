@@ -1,11 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+// 共通ユーティリティをインポート
+import 'package:skill_search_model/utils/uiUtils.dart';
 
 class PermissionSettingsScreen extends StatelessWidget {
   const PermissionSettingsScreen({super.key});
 
-  // ロールの論理名マップ
+  // アプリ内で使用するロール（権限レベル）の表示名マップ
   static const Map<String, String> roleLabels = {
     'admin': '管理者(admin)',
     'editor': '編集者(editor)',
@@ -21,6 +23,8 @@ class PermissionSettingsScreen extends StatelessWidget {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black87),
         actions: [
+          // UIUtilsにボタンの共通部品があれば差し替え可能ですが、
+          // ここではAppBar用の特殊な配置のためTextButton.iconを維持します。
           TextButton.icon(
             onPressed: () => _showAddUserDialog(context),
             icon: const Icon(Icons.person_add, color: Color(0xFF2E7D32)),
@@ -40,33 +44,29 @@ class PermissionSettingsScreen extends StatelessWidget {
 
           final users = snapshot.data!.docs;
 
-          // 1. 垂直スクロールバー
           return Scrollbar(
             thumbVisibility: true,
             child: SingleChildScrollView(
               scrollDirection: Axis.vertical,
               child: Padding(
-                padding: const EdgeInsets.all(8.0), // 余白を少し調整
+                padding: const EdgeInsets.all(8.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 2. 水平スクロールバー
                     Scrollbar(
                       notificationPredicate: (notif) => notif.depth == 1,
                       child: SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: ConstrainedBox(
-                          // ★スマホで「見切れ」を防ぐため、テーブルの最低横幅を強制する
                           constraints: BoxConstraints(
                             minWidth: MediaQuery.of(context).size.width,
                           ),
                           child: Theme(
                             data: Theme.of(context).copyWith(dividerColor: Colors.grey[200]),
                             child: DataTable(
-                              headingRowColor: MaterialStateProperty.all(Colors.grey[100]),
-                              dataRowHeight: 65,
+                              headingRowColor: WidgetStateProperty.all(Colors.grey[100]),
+                              dataRowMaxHeight: 65,
                               columnSpacing: 24,
-                              // ★重要：横幅が狭い時に自動で詰めすぎないように設定
                               horizontalMargin: 12,
                               columns: const [
                                 DataColumn(label: Text('表示名 / メールアドレス')),
@@ -93,7 +93,6 @@ class PermissionSettingsScreen extends StatelessWidget {
     );
   }
 
-  // テーブルの各行を作成するメソッド
   DataRow _buildDataRow(BuildContext context, QueryDocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     final permissions = data['permissions'] as Map<String, dynamic>? ?? {};
@@ -101,14 +100,12 @@ class PermissionSettingsScreen extends StatelessWidget {
     final String photoUrl = data['photoURL'] ?? "";
 
     return DataRow(cells: [
-      // 表示名 / メールアドレス
       DataCell(
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             CircleAvatar(
               radius: 16,
-              // null または 空文字 "" の場合はアイコンを表示
               backgroundImage: (photoUrl.isNotEmpty) ? NetworkImage(photoUrl) : null,
               child: (photoUrl.isEmpty) ? const Icon(Icons.person, size: 16) : null,
             ),
@@ -124,42 +121,39 @@ class PermissionSettingsScreen extends StatelessWidget {
           ],
         ),
       ),
-      // 権限レベル
       DataCell(
         DropdownButton<String>(
           value: roleLabels.containsKey(currentRole) ? currentRole : 'viewer',
           items: roleLabels.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
-          onChanged: (val) => _updateUserField(doc.id, 'role', val),
+          // contextを追加
+          onChanged: (val) => _updateUserField(context, doc.id, 'role', val),
           underline: const SizedBox(),
           style: const TextStyle(fontSize: 13, color: Colors.black87),
         ),
       ),
-      // 編集可否
       DataCell(
         Switch(
           value: permissions['canEdit'] ?? false,
           activeColor: const Color(0xFF2E7D32),
-          onChanged: (val) => _updatePermissionField(doc.id, 'canEdit', val),
+          // contextを追加
+          onChanged: (val) => _updatePermissionField(context, doc.id, 'canEdit', val),
         ),
       ),
-      // 書出可否
       DataCell(
         Switch(
           value: permissions['canExport'] ?? false,
           activeColor: const Color(0xFF2E7D32),
-          onChanged: (val) => _updatePermissionField(doc.id, 'canExport', val),
+          // contextを追加
+          onChanged: (val) => _updatePermissionField(context, doc.id, 'canExport', val),
         ),
       ),
-      // 登録日時
       DataCell(Text(_formatDate(data['registrationDate']), style: const TextStyle(fontSize: 12))),
-      // UID
       DataCell(
         SelectableText(
             data['uid'] ?? '',
             style: const TextStyle(fontSize: 10, fontFamily: 'monospace', color: Colors.grey)
         ),
       ),
-      // 削除
       DataCell(
         IconButton(
           icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
@@ -169,8 +163,6 @@ class PermissionSettingsScreen extends StatelessWidget {
     ]);
   }
 
-  // --- 共通ロジック ---
-
   String _formatDate(dynamic timestamp) {
     if (timestamp is Timestamp) {
       return DateFormat('yyyy/MM/dd HH:mm').format(timestamp.toDate());
@@ -178,18 +170,46 @@ class PermissionSettingsScreen extends StatelessWidget {
     return '-';
   }
 
-  Future<void> _updateUserField(String docId, String field, dynamic value) async {
-    await FirebaseFirestore.instance.collection('users').doc(docId).update({
-      field: value,
-      'updateDate': FieldValue.serverTimestamp(),
-    });
+  // --- Firestore更新：保存メッセージを追加 ---
+  Future<void> _updateUserField(BuildContext context, String docId, String field, dynamic value) async {
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(docId).update({
+        field: value,
+        'updateDate': FieldValue.serverTimestamp(),
+      });
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('設定を自動保存しました'), duration: Duration(seconds: 1)),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('保存エラー: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
-  Future<void> _updatePermissionField(String docId, String field, bool value) async {
-    await FirebaseFirestore.instance.collection('users').doc(docId).update({
-      'permissions.$field': value,
-      'updateDate': FieldValue.serverTimestamp(),
-    });
+  // --- Firestore更新：保存メッセージを追加 ---
+  Future<void> _updatePermissionField(BuildContext context, String docId, String field, bool value) async {
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(docId).update({
+        'permissions.$field': value,
+        'updateDate': FieldValue.serverTimestamp(),
+      });
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('自動保存しました'), duration: Duration(seconds: 1)),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('保存エラー: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   void _showAddUserDialog(BuildContext context) {
@@ -246,8 +266,9 @@ class PermissionSettingsScreen extends StatelessWidget {
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('キャンセル')),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2E7D32)),
+            // ★UIUtilsのボタンコンポーネントを使用
+            UIUtils.buildPrimaryButton(
+              label: '追加',
               onPressed: () async {
                 if (formKey.currentState!.validate()) {
                   await FirebaseFirestore.instance.collection('users').doc(uidController.text.trim()).set({
@@ -260,10 +281,15 @@ class PermissionSettingsScreen extends StatelessWidget {
                     'registrationDate': FieldValue.serverTimestamp(),
                     'updateDate': FieldValue.serverTimestamp(),
                   });
-                  if (context.mounted) Navigator.pop(context);
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('ユーザーを追加しました')),
+                    );
+                  }
                 }
               },
-              child: const Text('追加', style: TextStyle(color: Colors.white)),
+              color: const Color(0xFF2E7D32),
             ),
           ],
         ),
@@ -282,7 +308,12 @@ class PermissionSettingsScreen extends StatelessWidget {
           TextButton(
             onPressed: () async {
               await FirebaseFirestore.instance.collection('users').doc(docId).delete();
-              if (context.mounted) Navigator.pop(context);
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('データを削除しました')),
+                );
+              }
             },
             child: const Text('削除', style: TextStyle(color: Colors.red)),
           ),
