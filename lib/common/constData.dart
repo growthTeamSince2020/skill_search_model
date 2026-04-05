@@ -115,6 +115,20 @@ class constData{
     return {'names': nameIndices, 'values': valueIndices};
   }
 
+  /* 登録項目マスタ（Excelインポ・エクスポート用） */
+  static const List<String> teamRoleItems = ["PM経験", "PM補佐経験", "リーダ経験", "技術支援経験", "コンサル経験"];
+  static const List<String> processItems = ["要件定義", "基本設計", "詳細設計", "コーディング", "単体", "結合", "保守"];
+  static const List<String> langItems = ["C", "JAVA", "C#", "Go", "C++", "Python", "PHP", "Cobol", "JavaScript", "TypeScript", "Dart"];
+  static const List<String> dbItems = ["Oracle", "MySQL", "PostgresSQL", "SQLite", "MongoDB"];
+  static const List<String> osItems = ["Windows", "macOS", "Linux", "Android", "iOS", "WindowsServer"];
+  static const List<String> cloudItems = ["AWS", "Firebase", "GoogleCloud", "Azure"];
+  static const List<String> toolItems = ["Git", "svn", "Backlog", "Docker", "Jenkins", "Ansible", "androidStadio", "Visual Studio Code", "Eclipse", "IntelliJ IDEA", "Xcode"];
+
+  // 選択肢のリスト化（indexOf で数値変換するため）
+  static const List<String> yearsList = [yearsLabel0, yearsLabel1, yearsLabel2, yearsLabel3, yearsLabel4, yearsLabel5];
+  static const List<String> processLevelList = [levelLabel0, levelLabel1, levelLabel2, levelLabel3];
+  static const List<String> toolYearsList = [simpleYearsLabel0, simpleYearsLabel1, simpleYearsLabel2, simpleYearsLabel3, simpleYearsLabel4];
+
   // ==========================================
   // 3. 内部用プライベートメソッド
   // ==========================================
