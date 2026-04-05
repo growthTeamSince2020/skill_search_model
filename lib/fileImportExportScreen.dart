@@ -7,7 +7,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:skill_search_model/utils/uiUtils.dart';
 import 'package:csv/csv.dart';
 import 'exportCSV.dart';
+import 'exportExcel.dart';
 import 'importCSV.dart';
+import 'importExcel.dart';
 
 class CsvImportExportScreen extends StatefulWidget {
   const CsvImportExportScreen({Key? key}) : super(key: key);
@@ -17,57 +19,54 @@ class CsvImportExportScreen extends StatefulWidget {
 }
 
 class _CsvImportExportScreenState extends State<CsvImportExportScreen> {
-  // 処理中かどうかを管理するフラグ
   bool _isExporting = false;
   bool _isImporting = false;
-  // インポート結果を表示するメッセージ
   String _importMessage = '';
 
-  // --- エクスポート処理：Firestoreからデータを取得してCSV出力する ---
+  // ★ 追加：現在選択されているフォーマット (0: CSV, 1: Excel)
+  int _selectedFormat = 0;
+
+  // --- エクスポート処理 ---
   Future<void> _exportData() async {
-    setState(() => _isExporting = true); // ローディング開始
+    setState(() => _isExporting = true);
     try {
-      // 'engineer'コレクションの全データを取得
-      final snapshot = await FirebaseFirestore.instance.collection('engineer').get();
-      // 管理用の'sequenceNo'という名前のドキュメントを除外してリスト化
+      final snapshot = await FirebaseFirestore.instance.collection('engineer').orderBy('id').get();
       final docs = snapshot.docs.where((doc) => doc.id != 'sequenceNo').toList();
 
-      // 別ファイル(exportCSV.dart)で定義したロジックを使ってCSVファイルをダウンロード
-      await CSVExporter.export(docs);
+      if (_selectedFormat == 0) {
+        // CSVエクスポート (既存)
+        await CSVExporter.export(docs);
+      } else {
+        // ★ Excelエクスポートを実行
+        await ExcelExporter.export(docs);
+      }
     } catch (e) {
-      // エラーが発生した場合は画面下部に通知を表示
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("エクスポートに失敗しました: $e")));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("エラー: $e")));
     } finally {
-      setState(() => _isExporting = false); // ローディング終了
+      setState(() => _isExporting = false);
     }
   }
 
-  // --- インポート処理：ブラウザのファイル選択ダイアログを開く ---
+  // --- ファイル選択処理 ---
   void _pickAndImportFile() {
-    // HTMLのファイル入力要素を作成し、CSVファイルのみ許可する設定にする
-    final html.FileUploadInputElement uploadInput = html.FileUploadInputElement()..accept = '.csv';
+    // ★ 選択中のフォーマットによって許可する拡張子を変える
+    String acceptType = _selectedFormat == 0 ? '.csv' : '.xlsx';
+    final html.FileUploadInputElement uploadInput = html.FileUploadInputElement()..accept = acceptType;
 
-    // ファイルが選択された時のイベントリスナー
     uploadInput.onChange.listen((e) {
       final files = uploadInput.files;
-      if (files!.isEmpty) return; // 選択されていなければ終了
+      if (files!.isEmpty) return;
 
       final reader = html.FileReader();
-      // ファイルをバイトデータ(ArrayBuffer)として読み込む
       reader.readAsArrayBuffer(files[0]);
-      // 読み込み完了後の処理
       reader.onLoadEnd.listen((e) {
-        // 読み込んだデータをバイト配列に変換してインポート処理へ渡す
         _importData(reader.result as Uint8List);
       });
     });
-
-    // 擬似的にクリックイベントを発生させてダイアログを表示
     uploadInput.click();
   }
 
-  // --- インポート処理：読み込んだデータをFirestoreに書き込む ---
+  // --- インポート実行処理 ---
   Future<void> _importData(Uint8List fileBytes) async {
     setState(() {
       _isImporting = true;
@@ -75,50 +74,87 @@ class _CsvImportExportScreenState extends State<CsvImportExportScreen> {
     });
 
     try {
-      // 別ファイル(importCSV.dart)で定義したロジックを呼び出し、Firestoreへの登録を実行
-      final result = await CSVImporter.import(fileBytes);
+      String result;
+      if (_selectedFormat == 0) {
+        // CSVインポート
+        result = await CSVImporter.import(fileBytes);
+      } else {
+        // Excelインポート
+        result = await ExcelImporter.import(fileBytes);
+      }
 
-      setState(() {
-        // 実行結果（「〇件更新しました」など）を画面に表示
-        _importMessage = result;
-      });
+      setState(() => _importMessage = result);
+
+      // ★ UIUtils の共通ダイアログを使用
+      UIUtils.showResultDialog(
+        context,
+        title: '処理完了',
+        message: result,
+        isError: false, // 成功なので false
+      );
+
     } catch (e) {
       setState(() => _importMessage = "エラー：$e");
+
+      // ★ エラー時も UIUtils を使用
+      UIUtils.showResultDialog(
+        context,
+        title: 'エラー',
+        message: e.toString(),
+        isError: true, // エラーなので true
+      );
     } finally {
-      setState(() => _isImporting = false); // ローディング終了
+      setState(() => _isImporting = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('CSVインポート/エクスポート')),
+      appBar: AppBar(title: const Text('データ インポート/エクスポート')),
       body: Center(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // エクスポート用のカード表示
+              // ★ フォーマット選択スイッチ
+              Container(
+                width: 300,
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: SegmentedButton<int>(
+                  segments: const [
+                    ButtonSegment(value: 0, label: Text('CSV'), icon: Icon(Icons.description)),
+                    ButtonSegment(value: 1, label: Text('Excel'), icon: Icon(Icons.table_chart)),
+                  ],
+                  selected: {_selectedFormat},
+                  onSelectionChanged: (Set<int> newSelection) {
+                    setState(() {
+                      _selectedFormat = newSelection.first;
+                      _importMessage = ''; // フォーマットを変えたらメッセージをクリア
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(height: 20),
+
               _buildCard(
                 icon: Icons.cloud_download,
-                color: Colors.blue,
-                title: 'データのエクスポート',
-                description: '全ての技術者データをCSVとしてダウンロードします。',
+                color: _selectedFormat == 0 ? Colors.blue : Colors.teal,
+                title: '${_selectedFormat == 0 ? "CSV" : "Excel"}でエクスポート',
+                description: '全ての技術者データをダウンロードします。',
                 isLoading: _isExporting,
-                buttonLabel: 'エクスポート実行',
+                buttonLabel: 'ダウンロード開始',
                 onPressed: _exportData,
               ),
-              const SizedBox(height: 40),
-              // インポート用のカード表示
+              const SizedBox(height: 30),
+
               _buildCard(
                 icon: Icons.cloud_upload,
-                color: Colors.green,
-                title: 'データのインポート',
-                description: 'CSVファイルをアップロードして一括更新します。\n※更新は技術者Noをキーにして上書きします。\n存在しない技術者Noの場合は新規登録（最大500件まで）',
+                color: _selectedFormat == 0 ? Colors.green : Colors.orange,
+                title: '${_selectedFormat == 0 ? "CSV" : "Excel"}からインポート',
+                description: 'ファイルを選択して一括更新します。\n※技術者Noをキーにして上書きします。',
                 isLoading: _isImporting,
-                buttonLabel: 'ファイルを選択してインポート',
+                buttonLabel: 'ファイルを選択',
                 onPressed: _pickAndImportFile,
                 message: _importMessage,
               ),
