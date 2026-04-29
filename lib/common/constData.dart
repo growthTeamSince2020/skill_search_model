@@ -1,9 +1,13 @@
+import 'dart:ui';
+
 class constData{
   // システム全体のバージョン
   static const String systemVersion = "1.0.0";
   // エンジニアドキュメントのデータ構造バージョン
   // (将来、保存形式を大幅に変えた際のデータ移行判定に使用)
   static const double dataSchemaVersion = 1.0;
+  // メインカラーを登録・編集画面と統一
+  static const Color themeGreen = Color(0xFF2E7D32);
 
   static const String searchAgeSelectStringDefault = "" ;
   static const String searchAgeSelectStringUnder30 = "30歳以下" ;
@@ -16,6 +20,7 @@ class constData{
   static const String engineerSearch = "技術者検索一覧";
   static const String engineerSearchDitail = "技術者詳細検索";
   static const String engineerDetail = "技術者詳細";
+  static const String engineerDetailEdit = "技術者詳細編集";
 
   ///画面使用文言
   /* 共通 */
@@ -160,4 +165,22 @@ class constData{
     if (label == simpleYearsLabel4) return 4;
     return 0;
   }
+
+  // constData.dart のクラス内に追加してください
+  static Map<String, List<String>> get engineerMasters => {
+    'team_role': teamRoleItems,
+    'team_role_years': yearsList,
+    'process': processItems,
+    'process_experience': processLevelList,
+    'code_languages': langItems,
+    'code_languages_years': yearsList,
+    'db_experience': dbItems,
+    'db_experience_years': yearsList,
+    'os_experience': osItems,
+    'os_experience_years': yearsList,
+    'cloud_technology': cloudItems,
+    'cloud_technology_years': yearsList,
+    'tool': toolItems,
+    'tool_years': toolYearsList,
+  };
 }

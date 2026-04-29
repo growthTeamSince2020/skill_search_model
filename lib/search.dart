@@ -65,11 +65,12 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   }
 
   //エンジニア詳細ボタン押下時
-  void _engineerDetailScreen() {
+  void _engineerDetailScreen(String engineerId) { // 引数を追加
     Navigator.push<void>(
       context,
       MaterialPageRoute<void>(
-        builder: (BuildContext context) => const EngineerSeachDetailPage(),
+        // const を削除し、engineerId を渡す
+        builder: (BuildContext context) => EngineerSeachDetailPage(engineerId: engineerId),
       ),
     );
   }
@@ -341,13 +342,13 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     ),
                     leading: const Icon(Icons.account_circle),
                     trailing: IconButton(
-                        onPressed: () => _engineerDetailScreen(),
+                        onPressed: () => _engineerDetailScreen(doc.id),
                         icon: const Icon(
                           Icons.article,
                           size: 30,
                         )),
                     onTap: () {
-                      print('タップされました');
+                      _engineerDetailScreen(doc.id);
                     },
                   ),
                 );

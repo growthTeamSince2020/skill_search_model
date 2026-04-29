@@ -557,4 +557,68 @@ class UIUtils {
     );
   }
 
+  /**
+   * 削除確認ダイアログの表示と削除実行
+   *
+   * 削除確認のダイアログを表示し、ユーザーが承認した場合に
+   * 指定されたFirestoreドキュメントを削除します。
+   *
+   * @param context コンテキスト
+   * @param title ダイアログのタイトル（「技術者情報の削除」など）
+   * @param content ダイアログの本文
+   * @param collectionPath 削除対象のコレクション名
+   * @param documentId 削除対象のドキュメントID
+   * @return Future<bool> 実際に削除が行われた場合は true を返す
+   */
+  static Future<bool> showDeleteDialog(
+      BuildContext context, {
+        required String title,
+        required String content,
+        required String collectionPath,
+        required String documentId,
+      }) async {
+    final bool? result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        // タイトル部分を Row にしてアイコンを追加
+        title: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 48),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+        content: Text(content),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('キャンセル', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('削除',
+                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      try {
+        await FirebaseFirestore.instance
+            .collection(collectionPath)
+            .doc(documentId)
+            .delete();
+        return true;
+      } catch (e) {
+        // エラー時は前のダイアログを利用して通知
+        showMessageDialog(context,
+            title: 'エラー', message: '削除に失敗しました: $e', isError: true);
+        return false;
+      }
+    }
+    return false;
+  }
 }
