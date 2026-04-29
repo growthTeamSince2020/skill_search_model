@@ -33,7 +33,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
   /* 検索条件用　*/
   String codeLanguagesDropdownSelectedValue = ""; //言語選択条件値保持
-  List<String> codeLanguagesSelectItem = []; //言語選択条件リスト
+  // List<String> codeLanguagesSelectItem = []; //言語選択条件リスト
   int ageDropdownSelectedValue = 0; //年齢選択条件値保持
 
   /* 検索一覧用　*/
@@ -402,42 +402,117 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         );
       }
 
+      // --- 経験言語の判定 ---
+      bool codeLanguagesMatch = true;
+      if (searchConditions.getSearchSettingCodeLanguagesFlag == true) {
+        codeLanguagesMatch = _checkExperience(
+          userItems: data["code_languages"] ?? [],
+          userYears: data["code_languages_years"] ?? [],
+          searchSettings: searchConditions.getCodeLanguagesSearchItemChecked!,
+        );
+      }
+
+      // --- DB経験の判定 ---
+      bool dbExperienceMatch = true;
+      if (searchConditions.getSearchSettingDbExperienceFlag == true) {
+        dbExperienceMatch = _checkExperience(
+          userItems: data["db_experience"] ?? [],
+          userYears: data["db_experience_years"] ?? [],
+          searchSettings: searchConditions.getDbExperienceSearchItemChecked!,
+        );
+      }
+
+      // --- OS経験の判定 ---
+      bool osExperienceMatch = true;
+      if (searchConditions.getSearchSettingOsExperienceFlag == true) {
+        osExperienceMatch = _checkExperience(
+          userItems: data["os_experience"] ?? [],
+          userYears: data["os_experience_years"] ?? [],
+          searchSettings: searchConditions.getOsExperienceSearchItemChecked!,
+        );
+      }
+
+      // --- クラウド技術の判定 ---
+      bool cloudTechnologyMatch = true;
+      if (searchConditions.getSearchSettingCloudTechnologyFlag == true) {
+        cloudTechnologyMatch = _checkExperience(
+          userItems: data["cloud_technology"] ?? [],
+          userYears: data["cloud_technology_years"] ?? [],
+          searchSettings: searchConditions.getCloudTechnologySearchItemChecked!,
+        );
+      }
+
+      // --- ツールの判定 ---
+      bool toolMatch = true;
+      if (searchConditions.getSearchSettingToolFlag == true) {
+        toolMatch = _checkExperience(
+          userItems: data["tool"] ?? [],
+          userYears: data["tool_years"] ?? [],
+          searchSettings: searchConditions.getToolSearchItemChecked!,
+        );
+      }
+
       // AND検索（両方のフラグがONなら両方満たす必要がある）
-      return processMatch && teamRoleMatch;
+      return processMatch && teamRoleMatch && codeLanguagesMatch && dbExperienceMatch && osExperienceMatch && cloudTechnologyMatch && toolMatch;
     }).toList();
 
     return filteredList;
   }
 
-  /// 経験値判定用の共通ヘルパーメソッド
+  /// 経験値判定用の共通ヘルパーメソッド（カテゴリ内AND検索版）
   bool _checkExperience({
     required List<dynamic> userItems,
     required List<dynamic> userYears,
     required List<List<bool>> searchSettings,
   }) {
-    bool hasCondition = false;
+    // 1. まず、検索条件が一つでも設定されているか確認
+    bool hasAnyCondition = false;
+    for (var setting in searchSettings) {
+      if (setting.contains(true)) {
+        hasAnyCondition = true;
+        break;
+      }
+    }
 
+    // 検索条件が一つも設定されていない場合は「マッチ」とみなして通す
+    if (!hasAnyCondition) return true;
+
+    // 2. 各項目（Java, PHPなど）ごとに判定
     for (int i = 0; i < searchSettings.length; i++) {
-      for (int j = 0; j < searchSettings[i].length; j++) {
-        if (searchSettings[i][j] == true) {
-          hasCondition = true; // 何か一つでもチェックされている
+      // 項目 i に対して、どれか一つの年数でもチェックが入っているか
+      bool isThisItemTarget = searchSettings[i].contains(true);
 
-          // ユーザーがその項目(i)を持っていて、かつ経験年数(j)が一致するか
-          int userIdx = userItems.indexOf(i);
-          if (userIdx != -1 && userIdx < userYears.length) {
-            if (userYears[userIdx] == j) {
-              return true; // 条件の一つに合致したのでOK
+      if (isThisItemTarget) {
+        // この項目（例：Java）にチェックがある場合、ユーザーがそれを持っているか確認
+        int userIdx = userItems.indexOf(i);
+
+        if (userIdx == -1) {
+          // ユーザーがこの項目自体を持っていないので、その時点で不一致確定（AND条件失敗）
+          return false;
+        }
+
+        // ユーザーが持っている場合、選択されたいずれかの年数条件に合致するか確認
+        bool yearMatch = false;
+        for (int j = 0; j < searchSettings[i].length; j++) {
+          if (searchSettings[i][j] == true) {
+            // 型の不一致を防ぐため .toString() で比較
+            if (userYears[userIdx].toString() == j.toString()) {
+              yearMatch = true;
+              break; // 年数条件のどれかに合致すればその項目はクリア
             }
           }
+        }
+
+        if (!yearMatch) {
+          // 指定された年数条件に一つも合致しなかったら不一致確定
+          return false;
         }
       }
     }
 
-    // 検索条件が一つも設定されていない場合は「マッチ」とみなす、
-    // 設定されているのに一度も合致しなかった場合は「不一致」
-    return !hasCondition;
+    // すべてのチェック項目を一度も `return false` されずに通過できれば「合致」
+    return true;
   }
-
 
   /* UtilDateのリストから文字列取得して各Listにして返す
    * @param なし
@@ -445,9 +520,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   */
   Future<void> _fetchData() async {
     //プルダウン
-    List<String> codeLanguagesSelectItemsResult =
-        await getStringListFromFirestore("utilData", "code_languages_item",
-            "code_languages", true); //言語選択プルダウン
+    // List<String> codeLanguagesSelectItemsResult =
+    //     await getStringListFromFirestore("utilData", "code_languages_item",
+    //         "code_languages", true); //言語選択プルダウン
     //検索用
     List<String> codeLanguagesResult = await getStringListFromFirestore(
         "utilData", "code_languages_item", "code_languages", false); //言語リスト
@@ -474,7 +549,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
     setState(() {
       // totalCount = codeLanguagesResult.length;
-      codeLanguagesSelectItem = codeLanguagesSelectItemsResult; //言語選択プルダウン
+      // codeLanguagesSelectItem = codeLanguagesSelectItemsResult; //言語選択プルダウン
       codeLanguagesItem = codeLanguagesResult; //言語リスト
       processItem = processItemResult; //工程取得リスト
       teamRoleItem = teamRoleItemResult; //チーム役割取得リスト
@@ -576,9 +651,6 @@ List<String>? getUtilDateListGetterSimpleEvaluation(numberList,
   String simpleEvaluationWord;
 
   List<String> utilDataListForReturn = [];
-  // logger.i("numberList: $numberList");
-  // logger.i("utilDataArray: $utilDataArray");
-  // logger.i("numberList2: $numberList2");
   if (utilDataArray.isEmpty ||
       numberList.isEmpty ||
       numberList2.isEmpty ||
