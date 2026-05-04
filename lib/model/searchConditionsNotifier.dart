@@ -333,42 +333,49 @@ class SearchConditionsNotifier extends StateNotifier<SearchConditionsDto> {
   void processClear() {
     setSearchSettingProcessFlag(_searchSettingInit);
     setProcessSearchChecked(_searchItemProcessInit);
+    setProcessSearchItemChecked(_searchItemProcessCheckedInit);
   }
 
   ///teamRolesClearメソッド
   void teamRolesClear() {
     setSearchSettingTeamRolesFlag(_searchSettingInit);
     setTeamRolesSearchChecked(_searchItemTeamRolesInit);
+    setTeamRolesSearchItemChecked(_searchItemTeamRolesCheckedInit);
   }
 
   ///codeLanguagesClearメソッド
   void codeLanguagesClear() {
     setSearchSettingCodeLanguagesFlag(_searchSettingInit);
     setCodeLanguagesSearchChecked(_searchItemCodeLanguagesInit);
+    setCodeLanguagesSearchItemChecked(_searchItemCodeLanguagesCheckedInit);
   }
 
   ///dbExperienceClearメソッド
   void dbExperienceClear() {
     setSearchSettingDbExperienceFlag(_searchSettingInit);
     setDbExperienceSearchChecked(_searchItemDbExperienceInit);
+    setDbExperienceSearchItemChecked(_searchItemDbExperienceCheckedInit);
   }
 
   ///osExperienceClearメソッド
   void osExperienceClear() {
     setSearchSettingOsExperienceFlag(_searchSettingInit);
     setOsExperienceSearchChecked(_searchItemOsExperienceInit);
+    setOsExperienceSearchItemChecked(_searchItemOsExperienceCheckedInit);
   }
 
   ///cloudTechnologyClearメソッド
   void cloudTechnologyClear() {
     setSearchSettingCloudTechnologyFlag(_searchSettingInit);
     setCloudTechnologySearchChecked(_searchItemCloudTechnologyInit);
+    setCloudTechnologySearchItemChecked(_searchItemCloudTechnologyCheckedInit);
   }
 
   ///toolClearメソッド
   void toolClear(){
     setSearchSettingToolFlag(_searchSettingInit);
     setToolSearchChecked(_searchItemToolInit);
+    setToolSearchItemChecked(_searchItemToolCheckedInit);
   }
 
   ///clearメソッド
