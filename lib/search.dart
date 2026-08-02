@@ -28,7 +28,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   List<String> toolItem = [];
 
   // メインカラーを定義
-  static const themeGreen = Color(0xFF2E7D32);
+  static const themeColor = Color(0xFF2E7D32);
+  //static const themeColor = Color(0xFFFFFFFF);
 
   //詳細検索アイコン押下時
   void _detailSearchScreen() {
@@ -109,26 +110,34 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Colors.grey[100],//カードの間の色
       appBar: AppBar(
         title: Row(
           children: [
             const Padding(
               padding: EdgeInsets.only(right: 12.0),
-              child: Icon(Icons.search, color: themeGreen, size: 24.0),
+              child: Icon(Icons.screen_search_desktop_outlined, color: themeColor, size: 24.0),
             ),
             Text(
-              'エンジニア検索 ($totalCount件)',
+              'エンジニア検索 ',
               style: const TextStyle(
                 color: Colors.black87,
                 fontWeight: FontWeight.bold,
                 fontSize: 20,
               ),
             ),
+            const Spacer(),
+            Text('表示件数 $totalCount 件',style: const TextStyle(fontSize: 14, color: Colors.blueGrey),),
           ],
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: themeGreen,
+        shape: const Border(
+          bottom: BorderSide(
+            color: themeColor,//画面タイトルの下の線の色
+            width: 1.0,
+          ),
+        ),
+        backgroundColor: Colors.white,//画面タイトルの色
+        foregroundColor: themeColor,//戻るボタンの矢印の色
         centerTitle: true,
         elevation: 0,
         leading: IconButton(
@@ -164,121 +173,87 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               return const Center(child: Text("該当するエンジニアが見つかりませんでした。"));
             }
 
-            return ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: docs.length,
-              itemBuilder: (context, index) {
-                final data = docs[index].data() as Map<String, dynamic>;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,//左寄せ
+              children: [
+                _buildLegend(),//凡例
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: docs.length,
+                    itemBuilder: (context, index) {
+                      final data = docs[index].data() as Map<String, dynamic>;
 
-                return Card(
-                  elevation: 2,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () {
-                      _engineerDetailScreen(docs[index].id);
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const CircleAvatar(
-                                backgroundColor: themeGreen,
-                                child: Icon(Icons.person, color: Colors.white),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                      return Card(
+                        color: Color(0xFFFFFFFF),//カードの色
+                        elevation: 3,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            _engineerDetailScreen(docs[index].id);
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
                                   children: [
-                                    Text(
-                                      '${data['last_name'] ?? ''}${data['first_name'] ?? ''}',
-                                      style: const TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold),
+                                    const CircleAvatar(
+                                      backgroundColor: themeColor,//写真アイコンの色
+                                      child: Icon(Icons.person, color: Colors.white),
                                     ),
-                                    Text(
-                                      '${data['age'] ?? '--'}歳 / ${data['nearest_station_name'] ?? '駅未登録'}駅',
-                                      style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: 14),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            '${data['last_name'] ?? ''}${data['first_name'] ?? ''}',
+                                            style: const TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold),
+                                          ),
+                                          Text(
+                                            '${data['age'] ?? '--'}歳 / ${data['nearest_station_name'] ?? '駅未登録'}駅',
+                                            style: TextStyle(
+                                                color: Colors.black,//年齢と駅の色
+                                                fontSize: 14),
+                                          ),
+                                        ],
+                                      ),
                                     ),
+                                    const Icon(Icons.chevron_right,
+                                        color: Colors.grey),
                                   ],
                                 ),
-                              ),
-                              const Icon(Icons.chevron_right,
-                                  color: Colors.grey),
-                            ],
+                                Divider(height: 24, thickness: 0.5, color: Colors.black87),
+                                _buildSkillRow(Icons.account_tree, "工程",
+                                    data['process'], processItem, data['process_experience'], true),
+                                _buildSkillRow(Icons.group, "役割",
+                                    data['team_role'], teamRoleItem, data['team_role_years'], false),
+                                _buildSkillRow(Icons.code, "言語",
+                                    data['code_languages'], codeLanguagesItem, data['code_languages_years'], false),
+                                _buildSkillRow(Icons.storage, "DB",
+                                    data['db_experience'], dbExperienceItem, data['db_experience_years'], false),
+                                _buildSkillRow(Icons.memory_rounded, "OS",
+                                    data['os_experience'], osExperienceItem, data['os_experience_years'], false),
+                                _buildSkillRow(Icons.cloud_queue_rounded, "CLOUD",
+                                    data['cloud_technology'], cloudTechnologyItem, data['cloud_technology_years'], false),
+                                _buildSkillRow(Icons.build_circle_outlined, "TOOL",
+                                    data['tool'], toolItem, data['tool_years'], true),
+                              ],
+                            ),
                           ),
-                          const Divider(height: 24, thickness: 1),
-                          _buildSkillRow(
-                              Icons.account_tree,
-                              "工程",
-                              getUtilDateListGetterSimpleEvaluation(
-                                          data['process'],
-                                          processItem,
-                                          data['process_experience'],
-                                          true),),
-                          _buildSkillRow(
-                              Icons.group,
-                              "役割",
-                              getUtilDateListGetterSimpleEvaluation(
-                                          data['team_role'],
-                                          teamRoleItem,
-                                          data['team_role_years'],
-                                          false),),
-                          _buildSkillRow(
-                              Icons.code,
-                              "言語",
-                              getUtilDateListGetterSimpleEvaluation(
-                                          data['code_languages'],
-                                          codeLanguagesItem,
-                                          data['code_languages_years'],
-                                          false),),
-                          _buildSkillRow(
-                              Icons.storage,
-                              "DB",
-                              getUtilDateListGetterSimpleEvaluation(
-                                          data['db_experience'],
-                                          dbExperienceItem,
-                                          data['db_experience_years'],
-                                          false),),
-                          _buildSkillRow(
-                              Icons.memory_rounded,
-                              "OS",
-                              getUtilDateListGetterSimpleEvaluation(
-                                  data['os_experience'],
-                                  osExperienceItem,
-                                  data['os_experience_years'],
-                                  false),),
-                          _buildSkillRow(
-                              Icons.cloud_queue_rounded,
-                              "CLOUD",
-                              getUtilDateListGetterSimpleEvaluation(
-                                  data['cloud_technology'],
-                                  cloudTechnologyItem,
-                                  data['cloud_technology_years'],
-                                  false),),
-                          _buildSkillRow(
-                              Icons.build_circle_outlined,
-                              "TOOL",
-                              getUtilDateListGetterSimpleEvaluation(
-                                  data['tool'],
-                                  toolItem,
-                                  data['tool_years'],
-                                  false),),
-
-                        ],
-                      ),
-                    ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
+                ),
+              ],
             );
           }),
       floatingActionButton: FloatingActionButton.extended(
@@ -291,34 +266,176 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     );
   }
 
-  Widget _buildSkillRow(IconData icon, String label, List<String>? values) {
+
+// =============================================
+// ③ _buildSkillRow を完全置き換え
+// =============================================
+
+  Widget _buildSkillRow(IconData icon, String label, dynamic numList,
+      List<String> masterArray, dynamic valueList, bool isProcessOrTool) {
+
+    // チップリストを生成
+    final chips = <Widget>[];
+    if (numList is List && masterArray.isNotEmpty && valueList is List) {
+      for (int i = 0; i < numList.length; i++) {
+        final itemIdx = numList[i] as int;
+        if (itemIdx >= masterArray.length) continue;
+        final valIdx = i < valueList.length ? (valueList[i] as int) : 0;
+        chips.add(
+          isProcessOrTool
+              ? _buildProcessChip(masterArray[itemIdx], valIdx)
+              : _buildYearChip(masterArray[itemIdx], valIdx),
+        );
+      }
+    }
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: Colors.blueGrey),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 45,
-            child: Text(label,
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: Colors.blueGrey)),
+          // ラベル行
+          Row(
+            children: [
+              Icon(icon, size: 15, color: Colors.black),//工程、役割、言語、DB、OS、CLOUD、TOOLのアイコンの色
+              const SizedBox(width: 6),
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black)),//工程、役割、言語、DB、OS、CLOUD、TOOLのアイコンの色
+            ],
           ),
-          Expanded(
-            child: Wrap(
-              spacing: 6.0, // チップ間の横の間隔
-              runSpacing: 4.0, // 改行した時の縦の間隔
-              children: values != null && values.isNotEmpty
-                  ? values.map((value) => _buildTag(value)).toList()
-                  : [
-                const Text('未登録',
-                    style: TextStyle(fontSize: 13, color: Colors.grey))
-              ],
-            ),
+          const SizedBox(height: 8),
+          // チップ行
+          chips.isEmpty
+              ? Text('未登録',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600))
+              : Wrap(spacing: 0, runSpacing: 6, children: chips),
+        ],
+      ),
+    );
+  }
+
+// =============================================
+// ① ランク判定ヘルパー（クラス内に追加）
+// =============================================
+
+// yearsList index → ランク色テーマ
+// 0=1年未満, 1=1〜2年, 2=2〜3年, 3=3〜5年, 4=5〜10年, 5=10年以上
+  _YearTheme _yearTheme(int yearIdx) {
+    if (yearIdx >= 4)
+      return _YearTheme(
+          dot: const Color(0xFFFFAA00),
+          border: const Color(0xFFFFAA00),
+          label: yearIdx == 5 ? '10年以上' : '5〜10年');
+    if (yearIdx >= 3)
+      return _YearTheme(
+          dot: const Color(0xFF4CAF50),
+          border: const Color(0xFF4CAF50),
+          label: '3〜5年');
+    if (yearIdx >= 2)
+      return _YearTheme(
+          dot: const Color(0xFF4CAF50),
+          border: const Color(0xFF4CAF50),
+          label: '2〜3年');
+    if (yearIdx >= 1)
+      return _YearTheme(
+          dot: const Color(0xFF2196F3),
+          border: const Color(0xFF2196F3),
+          label: '1〜2年');
+    return _YearTheme(
+        dot: const Color(0xFF9E9E9E),
+        border: const Color(0xFF616161),
+        label: '1年未満');
+  }
+
+// processLevelList index → ランク色テーマ
+// 0=未経験, 1=経験あり作成サポート必要, 2=サポートなくできる, 3=経験豊富でレビューできる
+  _YearTheme _levelTheme(int levelIdx, String name) {
+    if (levelIdx >= 3)
+      return _YearTheme(
+          dot: const Color(0xFFFFAA00),
+          border: const Color(0xFFFFAA00),
+          label: name,
+          isCheck: true);
+    if (levelIdx >= 2)
+      return _YearTheme(
+          dot: const Color(0xFF4CAF50),
+          border: const Color(0xFF4CAF50),
+          label: name,
+          isCheck: true);
+    if (levelIdx >= 1)
+      return _YearTheme(
+          dot: const Color(0xFF9E9E9E),
+          border: const Color(0xFF616161),
+          label: name,
+          isCheck: true);
+    return _YearTheme(
+        dot: const Color(0xFF555555),
+        border: const Color(0xFF444444),
+        label: name,
+        isDash: true);
+  }
+
+// =============================================
+// ② チップWidget（_buildTag の置き換え）
+// =============================================
+  Widget _buildYearChip(String name, int yearIdx) {
+    final t = _yearTheme(yearIdx);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFFFF),
+        border: Border.all(color: t.border, width: 3),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8, height: 8,
+            decoration: BoxDecoration(color: t.dot, shape: BoxShape.circle),
           ),
+          const SizedBox(width: 6),
+          Text(name,
+              style: const TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black//Colors.white
+               )),
+          const SizedBox(width: 6),
+          Text(t.label,
+              style: TextStyle(fontSize: 11, color: Colors.black)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProcessChip(String name, int levelIdx) {
+    final t = _levelTheme(levelIdx, name);
+
+    if (t.isDash) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFFFF),
+        border: Border.all(color: t.border, width: 3),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            t.isDash ? Icons.remove : Icons.check,
+            size: 12,
+            color: t.dot,
+          ),
+          const SizedBox(width: 5),
+          Text(name,
+              style: const TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black)),
         ],
       ),
     );
@@ -465,22 +582,64 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     return true;
   }
 
-  // 表示用ロジック（修正：正しいインデックスで名前を引くように変更）
-  List<String>? getUtilDateListGetterSimpleEvaluation(dynamic numList,
-      List<String> utilArray, dynamic yearsList, bool category) {
-    if (numList == null || utilArray.isEmpty || yearsList == null) return null;
-    List<String> result = [];
-    for (int i = 0; i < numList.length; i++) {
-      int itemIndex = numList[i]; // ユーザーが持っているIDを取得
-      if (itemIndex < utilArray.length) {
-        String mark = (yearsList[i] < 2)
-            ? "△"
-            : (yearsList[i] < 4)
-                ? "◯"
-                : "◎";
-        result.add("${utilArray[itemIndex]} $mark");
-      }
-    }
-    return result.isEmpty ? null : result;
+// 凡例（レジェンド）を表示するウィジェット
+  Widget _buildLegend() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      color: Colors.grey[100],
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "ランク凡例:",
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blueGrey),
+            ),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 12,
+              children: [
+                _legendItem(const Color(0xFFFFAA00), "5年以上/リード可"),
+                _legendItem(const Color(0xFF4CAF50), "2〜5年/独力可"),
+                _legendItem(const Color(0xFF2196F3), "1〜2年/サポート有"),
+                _legendItem(const Color(0xFF9E9E9E), "1年未満"),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
+
+// 凡例の各項目（丸い点とテキスト）
+  Widget _legendItem(Color color, String text) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(text, style: const TextStyle(fontSize: 10, color: Colors.black54)),
+      ],
+    );
+  }
+}
+// search.dart の末尾（クラス外）に追加
+class _YearTheme {
+  final Color dot;
+  final Color border;
+  final String label;
+  final bool isCheck;
+  final bool isDash;
+  const _YearTheme({
+    required this.dot,
+    required this.border,
+    required this.label,
+    this.isCheck = false,
+    this.isDash = false,
+  });
 }

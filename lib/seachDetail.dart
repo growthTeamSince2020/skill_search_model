@@ -17,6 +17,8 @@ class SeachDetailPage extends ConsumerStatefulWidget {
 
 class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
   bool _isInitialized = false;
+  // メインカラーを定義
+  static const themeGreen = Color(0xFF808000);
 
   // searchConProviderのインスタンスを取得
   late SearchConditionsDto searchConditions;
@@ -268,8 +270,7 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
 
     //経験言語(大項目チェックリスト、フラグ)の値の初期化　各フラグが全てfalse（初期値）だったらフラグをfalseにする
     bool codeLanguagesSearchItemCheckedAllFalse =
-        _codeLanguagesSearchItemChecked
-            .every((row) => row.every((element) => element == false));
+        _codeLanguagesSearchItemChecked.every((row) => row.every((element) => element == false));
     if (codeLanguagesSearchItemCheckedAllFalse) {
       notifier.codeLanguagesClear();
     } else {
@@ -387,18 +388,12 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
         return {
           'team_role': docTeamRole.data()!['team_role'] as List<dynamic>,
           'process': docProcess.data()!['process'] as List<dynamic>,
-          'code_languages':
-              docCodeLanguages.data()!['code_languages'] as List<dynamic>,
-          'experience_category': docExperienceCategory
-              .data()!['experience_category'] as List<dynamic>,
-          'years_category':
-              docYearsCategory.data()!['years_category'] as List<dynamic>,
-          'db_experience':
-              docDbExperience.data()!['db_experience'] as List<dynamic>,
-          'os_experience':
-              docOsExperience.data()!['os_experience'] as List<dynamic>,
-          'cloud_technology':
-              docCloudTech.data()!['cloud_technology'] as List<dynamic>,
+          'code_languages':docCodeLanguages.data()!['code_languages'] as List<dynamic>,
+          'experience_category': docExperienceCategory.data()!['experience_category'] as List<dynamic>,
+          'years_category':docYearsCategory.data()!['years_category'] as List<dynamic>,
+          'db_experience':docDbExperience.data()!['db_experience'] as List<dynamic>,
+          'os_experience':docOsExperience.data()!['os_experience'] as List<dynamic>,
+          'cloud_technology':docCloudTech.data()!['cloud_technology'] as List<dynamic>,
           'tool': docTool.data()!['tool'] as List<dynamic>,
         };
       } else {
@@ -472,8 +467,7 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
       _osExperienceSearchChecked =
           List<bool>.from(searchConditions.getOsExperienceSearchChecked!);
       //OS経験(小項目のチェック状態)の値を取得
-      _osExperienceSearchItemChecked = searchConditions
-          .getOsExperienceSearchItemChecked!
+      _osExperienceSearchItemChecked = searchConditions.getOsExperienceSearchItemChecked!
           .map((list) => List<bool>.from(list))
           .toList();
 
@@ -484,8 +478,7 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
       _cloudTechnologySearchChecked =
           List<bool>.from(searchConditions.getCloudTechnologySearchChecked!);
       //クラウド経験(小項目のチェック状態)の値を取得
-      _cloudTechnologySearchItemChecked = searchConditions
-          .getCloudTechnologySearchItemChecked!
+      _cloudTechnologySearchItemChecked = searchConditions.getCloudTechnologySearchItemChecked!
           .map((list) => List<bool>.from(list))
           .toList();
 
@@ -507,20 +500,32 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
     }
     return Scaffold(
         appBar: AppBar(
-          backgroundColor: Colors.lightGreenAccent.shade700,
-          iconTheme: const IconThemeData(color: Colors.white),
           title: Row(
             children: [
-              Container(
-                  margin: const EdgeInsets.only(right: 10),
-                  child: const Icon(
-                    Icons.filter_list_alt,
-                    color: Colors.white,
-                  )),
-              const Text(constData.engineerSearchDitail,
-                  style: TextStyle(color: Colors.white)),
+              const Padding(
+                padding: EdgeInsets.only(right: 12.0),
+                child: Icon(Icons.filter_alt_outlined, color: themeGreen, size: 24.0),
+              ),
+              Text(
+                constData.engineerSearchDitail,
+                style: const TextStyle(
+                  color: Colors.black87,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                ),
+              ),
             ],
           ),
+          shape: const Border(
+            bottom: BorderSide(
+              color: themeGreen,
+              width: 1.0,
+            ),
+          ),
+          backgroundColor: Colors.white,
+          foregroundColor: themeGreen,
+          centerTitle: true,
+          elevation: 0,
         ),
         body: ListView(
           children: <Widget>[
@@ -557,13 +562,11 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
                     onChanged: (value) {
                       setState(() {
                         logger.i('value: ${_ageList.indexOf(value!)}');
-                        ref
-                            .read(searchConditionsControllerProvider.notifier)
+                        ref.read(searchConditionsControllerProvider.notifier)
                             .setAgeDropdownSelectedValue(
                                 _ageList.indexOf(value!));
                         if (_ageChecked != 0) {
-                          ref
-                              .read(searchConditionsControllerProvider.notifier)
+                          ref.read(searchConditionsControllerProvider.notifier)
                               .setSearchSettingFlag(true); //検索設定フラグを更新
                         }
                       });
@@ -600,43 +603,26 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
                       CheckboxListTile(
                         title: Text(teamRoles),
                         //1 value: _teamRolesChecked[teamRoles] != null,
-                        value: _teamRolesSearchChecked[
-                            _teamRoles.indexOf(teamRoles)],
+                        value: _teamRolesSearchChecked[_teamRoles.indexOf(teamRoles)],
                         onChanged: (value) {
                           setState(() {
                             //2
-                            _teamRolesSearchChecked[
-                                _teamRoles.indexOf(teamRoles)] = value!;
-                            ref
-                                .read(
-                                    searchConditionsControllerProvider.notifier)
-                                .setTeamRolesSearchChecked(
-                                    _teamRolesSearchChecked);
+                            _teamRolesSearchChecked[_teamRoles.indexOf(teamRoles)] = value!;
+                            ref.read(searchConditionsControllerProvider.notifier)
+                                .setTeamRolesSearchChecked(_teamRolesSearchChecked);
                             if (value == false) {
                               //大項目がチェックがFALSEになったら小項目もFALSEにする
                               _teamRolesSearchItemChecked[
-                                  _teamRoles.indexOf(teamRoles)] = [
-                                false,
-                                false,
-                                false,
-                                false,
-                                false,
-                                false
-                              ];
-                              ref
-                                  .read(searchConditionsControllerProvider
-                                      .notifier)
-                                  .setTeamRolesSearchItemChecked(
-                                      _teamRolesSearchItemChecked);
+                                  _teamRoles.indexOf(teamRoles)] = [false, false, false, false, false, false];
+                              ref.read(searchConditionsControllerProvider.notifier)
+                                  .setTeamRolesSearchItemChecked(_teamRolesSearchItemChecked);
                             }
                           });
                         },
                         controlAffinity: ListTileControlAffinity.leading,
                         contentPadding: EdgeInsets.zero,
                       ),
-                      if (_teamRolesSearchChecked[
-                              _teamRoles.indexOf(teamRoles)] ==
-                          true)
+                      if (_teamRolesSearchChecked[_teamRoles.indexOf(teamRoles)] == true)
                         Padding(
                           padding: const EdgeInsets.only(left: 16.0),
                           child: Wrap(
@@ -644,28 +630,13 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
                             children: _yearsCategories.map((yearsCategory) {
                               return CheckboxListTile(
                                 title: Text(yearsCategory),
-                                value: _teamRolesSearchItemChecked[
-                                        _teamRoles.indexOf(teamRoles)]
-                                    [_yearsCategories.indexOf(yearsCategory)],
+                                value: _teamRolesSearchItemChecked[_teamRoles.indexOf(teamRoles)][_yearsCategories.indexOf(yearsCategory)],
                                 onChanged: (value) {
                                   setState(() {
-                                    _teamRolesSearchItemChecked[
-                                            _teamRoles.indexOf(teamRoles)][
-                                        _yearsCategories
-                                            .indexOf(yearsCategory)] = value!;
-                                    ref
-                                        .read(searchConditionsControllerProvider
-                                            .notifier)
-                                        .setTeamRolesSearchItemChecked(
-                                            _teamRolesSearchItemChecked);
-                                    ref
-                                        .read(searchConditionsControllerProvider
-                                            .notifier)
-                                        .setSearchSettingTeamRolesFlag(true);
-                                    ref
-                                        .read(searchConditionsControllerProvider
-                                            .notifier)
-                                        .setSearchSettingFlag(true);
+                                    _teamRolesSearchItemChecked[_teamRoles.indexOf(teamRoles)][_yearsCategories.indexOf(yearsCategory)] = value!;
+                                    ref.read(searchConditionsControllerProvider.notifier).setTeamRolesSearchItemChecked(_teamRolesSearchItemChecked);
+                                    ref.read(searchConditionsControllerProvider.notifier).setSearchSettingTeamRolesFlag(true);
+                                    ref.read(searchConditionsControllerProvider.notifier).setSearchSettingFlag(true);
                                   });
                                 },
                                 controlAffinity:
@@ -706,74 +677,39 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
                       children: [
                         CheckboxListTile(
                           title: Text(process),
-                          value: _processSearchChecked[
-                              _processes.indexOf(process)],
+                          value: _processSearchChecked[_processes.indexOf(process)],
                           onChanged: (value) {
                             setState(() {
-                              _processSearchChecked[
-                                  _processes.indexOf(process)] = value!;
-                              ref
-                                  .read(searchConditionsControllerProvider
-                                      .notifier)
-                                  .setProcessSearchChecked(
-                                      _processSearchChecked);
+                              _processSearchChecked[_processes.indexOf(process)] = value!;
+                              ref.read(searchConditionsControllerProvider.notifier).setProcessSearchChecked(_processSearchChecked);
                               if (value == false) {
                                 //大項目がチェックがFALSEになったら小項目もFALSEにする
                                 _processSearchItemChecked[_processes.indexOf(
                                     process)] = [false, false, false, false];
-                                ref
-                                    .read(searchConditionsControllerProvider
-                                        .notifier)
-                                    .setProcessSearchItemChecked(
-                                        _processSearchItemChecked);
+                                ref.read(searchConditionsControllerProvider.notifier).setProcessSearchItemChecked(_processSearchItemChecked);
                               } else {
-                                ref
-                                    .read(searchConditionsControllerProvider
-                                        .notifier)
-                                    .setSearchSettingProcessFlag(true);
+                                ref.read(searchConditionsControllerProvider.notifier).setSearchSettingProcessFlag(true);
                               }
                             });
                           },
                           controlAffinity: ListTileControlAffinity.leading,
                           contentPadding: EdgeInsets.zero,
                         ),
-                        if (_processSearchChecked[
-                                _processes.indexOf(process)] ==
-                            true)
+                        if (_processSearchChecked[_processes.indexOf(process)] == true)
                           Padding(
                             padding: const EdgeInsets.only(left: 16.0),
                             child: Wrap(
                               spacing: 8.0,
-                              children: _experienceCategories
-                                  .map((experienceCategory) {
+                              children: _experienceCategories.map((experienceCategory) {
                                 return CheckboxListTile(
                                   title: Text(experienceCategory),
-                                  value: _processSearchItemChecked[
-                                          _processes.indexOf(process)][
-                                      _experienceCategories
-                                          .indexOf(experienceCategory)],
+                                  value: _processSearchItemChecked[_processes.indexOf(process)][_experienceCategories.indexOf(experienceCategory)],
                                   onChanged: (value) {
                                     setState(() {
-                                      _processSearchItemChecked[
-                                              _processes.indexOf(process)][
-                                          _experienceCategories.indexOf(
-                                              experienceCategory)] = value!;
-                                      ref
-                                          .read(
-                                              searchConditionsControllerProvider
-                                                  .notifier)
-                                          .setProcessSearchItemChecked(
-                                              _processSearchItemChecked);
-                                      ref
-                                          .read(
-                                              searchConditionsControllerProvider
-                                                  .notifier)
-                                          .setSearchSettingProcessFlag(true);
-                                      ref
-                                          .read(
-                                              searchConditionsControllerProvider
-                                                  .notifier)
-                                          .setSearchSettingFlag(true);
+                                      _processSearchItemChecked[_processes.indexOf(process)][_experienceCategories.indexOf(experienceCategory)] = value!;
+                                      ref.read(searchConditionsControllerProvider.notifier).setProcessSearchItemChecked(_processSearchItemChecked);
+                                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingProcessFlag(true);
+                                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingFlag(true);
                                     });
                                   },
                                   controlAffinity:
@@ -817,42 +753,22 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
                       children: [
                         CheckboxListTile(
                           title: Text(codeLanguages),
-                          value: _codeLanguagesSearchChecked[
-                              _codeLanguages.indexOf(codeLanguages)],
+                          value: _codeLanguagesSearchChecked[_codeLanguages.indexOf(codeLanguages)],
                           onChanged: (value) {
                             setState(() {
-                              _codeLanguagesSearchChecked[_codeLanguages
-                                  .indexOf(codeLanguages)] = value!;
-                              ref
-                                  .read(searchConditionsControllerProvider
-                                      .notifier)
-                                  .setCodeLanguagesSearchChecked(
-                                      _codeLanguagesSearchChecked);
+                              _codeLanguagesSearchChecked[_codeLanguages.indexOf(codeLanguages)] = value!;
+                              ref.read(searchConditionsControllerProvider.notifier).setCodeLanguagesSearchChecked(_codeLanguagesSearchChecked);
                               if (value == false) {
                                 //大項目がチェックがFALSEになったら小項目もFALSEにする
-                                _codeLanguagesSearchItemChecked[
-                                    _codeLanguages.indexOf(codeLanguages)] = [
-                                  false,
-                                  false,
-                                  false,
-                                  false,
-                                  false,
-                                  false
-                                ];
-                                ref
-                                    .read(searchConditionsControllerProvider
-                                        .notifier)
-                                    .setCodeLanguagesSearchItemChecked(
-                                        _codeLanguagesSearchItemChecked);
+                                _codeLanguagesSearchItemChecked[_codeLanguages.indexOf(codeLanguages)] = [false, false, false, false, false, false];
+                                ref.read(searchConditionsControllerProvider.notifier).setCodeLanguagesSearchItemChecked(_codeLanguagesSearchItemChecked);
                               }
                             });
                           },
                           controlAffinity: ListTileControlAffinity.leading,
                           contentPadding: EdgeInsets.zero,
                         ),
-                        if (_codeLanguagesSearchChecked[
-                                _codeLanguages.indexOf(codeLanguages)] ==
-                            true)
+                        if (_codeLanguagesSearchChecked[_codeLanguages.indexOf(codeLanguages)] == true)
                           Padding(
                             padding: const EdgeInsets.only(left: 16.0),
                             child: Wrap(
@@ -860,40 +776,18 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
                               children: _yearsCategories.map((yearsCategory) {
                                 return CheckboxListTile(
                                   title: Text(yearsCategory),
-                                  value: _codeLanguagesSearchItemChecked[
-                                          _codeLanguages.indexOf(codeLanguages)]
-                                      [_yearsCategories.indexOf(yearsCategory)],
+                                  value: _codeLanguagesSearchItemChecked[_codeLanguages.indexOf(codeLanguages)][_yearsCategories.indexOf(yearsCategory)],
                                   onChanged: (value) {
                                     setState(() {
-                                      _codeLanguagesSearchItemChecked[
-                                          _codeLanguages.indexOf(
-                                              codeLanguages)][_yearsCategories
-                                          .indexOf(yearsCategory)] = value!;
+                                      _codeLanguagesSearchItemChecked[_codeLanguages.indexOf(codeLanguages)][_yearsCategories.indexOf(yearsCategory)] = value!;
                                       // ここでフラグを更新すると、次回表示時や再ビルド時に反映されます
                                       if (value == true) {
                                         _searchSettingFlagCodeLanguages = true;
                                       }
-                                      _codeLanguagesSearchItemChecked[
-                                          _codeLanguages.indexOf(
-                                              codeLanguages)][_yearsCategories
-                                          .indexOf(yearsCategory)] = value!;
-                                      ref
-                                          .read(
-                                              searchConditionsControllerProvider
-                                                  .notifier)
-                                          .setCodeLanguagesSearchItemChecked(
-                                              _codeLanguagesSearchItemChecked);
-                                      ref
-                                          .read(
-                                              searchConditionsControllerProvider
-                                                  .notifier)
-                                          .setSearchSettingCodeLanguagesFlag(
-                                              true);
-                                      ref
-                                          .read(
-                                              searchConditionsControllerProvider
-                                                  .notifier)
-                                          .setSearchSettingFlag(true);
+                                      _codeLanguagesSearchItemChecked[_codeLanguages.indexOf(codeLanguages)][_yearsCategories.indexOf(yearsCategory)] = value!;
+                                      ref.read(searchConditionsControllerProvider.notifier).setCodeLanguagesSearchItemChecked(_codeLanguagesSearchItemChecked);
+                                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingCodeLanguagesFlag(true);
+                                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingFlag(true);
                                     });
                                   },
                                   controlAffinity:
@@ -936,42 +830,22 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
                       children: [
                         CheckboxListTile(
                           title: Text(dbExperience),
-                          value: _dbExperienceSearchChecked[
-                              _dbExperience.indexOf(dbExperience)],
+                          value: _dbExperienceSearchChecked[_dbExperience.indexOf(dbExperience)],
                           onChanged: (value) {
                             setState(() {
-                              _dbExperienceSearchChecked[
-                                  _dbExperience.indexOf(dbExperience)] = value!;
-                              ref
-                                  .read(searchConditionsControllerProvider
-                                      .notifier)
-                                  .setDbExperienceSearchChecked(
-                                      _dbExperienceSearchChecked);
+                              _dbExperienceSearchChecked[_dbExperience.indexOf(dbExperience)] = value!;
+                              ref.read(searchConditionsControllerProvider.notifier).setDbExperienceSearchChecked(_dbExperienceSearchChecked);
                               if (value == false) {
                                 //大項目がチェックがFALSEになったら小項目もFALSEにする
-                                _dbExperienceSearchItemChecked[
-                                    _dbExperience.indexOf(dbExperience)] = [
-                                  false,
-                                  false,
-                                  false,
-                                  false,
-                                  false,
-                                  false
-                                ];
-                                ref
-                                    .read(searchConditionsControllerProvider
-                                        .notifier)
-                                    .setDbExperienceSearchItemChecked(
-                                        _dbExperienceSearchItemChecked);
+                                _dbExperienceSearchItemChecked[_dbExperience.indexOf(dbExperience)] = [false, false, false, false, false, false];
+                                ref.read(searchConditionsControllerProvider.notifier).setDbExperienceSearchItemChecked(_dbExperienceSearchItemChecked);
                               }
                             });
                           },
                           controlAffinity: ListTileControlAffinity.leading,
                           contentPadding: EdgeInsets.zero,
                         ),
-                        if (_dbExperienceSearchChecked[
-                                _dbExperience.indexOf(dbExperience)] ==
-                            true)
+                        if (_dbExperienceSearchChecked[_dbExperience.indexOf(dbExperience)] == true)
                           Padding(
                             padding: const EdgeInsets.only(left: 16.0),
                             child: Wrap(
@@ -979,32 +853,13 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
                               children: _yearsCategories.map((yearsCategory) {
                                 return CheckboxListTile(
                                   title: Text(yearsCategory),
-                                  value: _dbExperienceSearchItemChecked[
-                                          _dbExperience.indexOf(dbExperience)]
-                                      [_yearsCategories.indexOf(yearsCategory)],
+                                  value: _dbExperienceSearchItemChecked[_dbExperience.indexOf(dbExperience)][_yearsCategories.indexOf(yearsCategory)],
                                   onChanged: (value) {
                                     setState(() {
-                                      _dbExperienceSearchItemChecked[
-                                          _dbExperience.indexOf(
-                                              dbExperience)][_yearsCategories
-                                          .indexOf(yearsCategory)] = value!;
-                                      ref
-                                          .read(
-                                              searchConditionsControllerProvider
-                                                  .notifier)
-                                          .setDbExperienceSearchItemChecked(
-                                              _dbExperienceSearchItemChecked);
-                                      ref
-                                          .read(
-                                              searchConditionsControllerProvider
-                                                  .notifier)
-                                          .setSearchSettingDbExperienceFlag(
-                                              true);
-                                      ref
-                                          .read(
-                                              searchConditionsControllerProvider
-                                                  .notifier)
-                                          .setSearchSettingFlag(true);
+                                      _dbExperienceSearchItemChecked[_dbExperience.indexOf(dbExperience)][_yearsCategories.indexOf(yearsCategory)] = value!;
+                                      ref.read(searchConditionsControllerProvider.notifier).setDbExperienceSearchItemChecked(_dbExperienceSearchItemChecked);
+                                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingDbExperienceFlag(true);
+                                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingFlag(true);
                                     });
                                   },
                                   controlAffinity:
@@ -1047,42 +902,22 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
                       children: [
                         CheckboxListTile(
                           title: Text(osExperience),
-                          value: _osExperienceSearchChecked[
-                              _osExperience.indexOf(osExperience)],
+                          value: _osExperienceSearchChecked[_osExperience.indexOf(osExperience)],
                           onChanged: (value) {
                             setState(() {
-                              _osExperienceSearchChecked[
-                                  _osExperience.indexOf(osExperience)] = value!;
-                              ref
-                                  .read(searchConditionsControllerProvider
-                                      .notifier)
-                                  .setOsExperienceSearchChecked(
-                                      _osExperienceSearchChecked);
+                              _osExperienceSearchChecked[_osExperience.indexOf(osExperience)] = value!;
+                              ref.read(searchConditionsControllerProvider.notifier).setOsExperienceSearchChecked(_osExperienceSearchChecked);
                               if (value == false) {
                                 //大項目がチェックがFALSEになったら小項目もFALSEにする
-                                _osExperienceSearchItemChecked[
-                                    _osExperience.indexOf(osExperience)] = [
-                                  false,
-                                  false,
-                                  false,
-                                  false,
-                                  false,
-                                  false
-                                ];
-                                ref
-                                    .read(searchConditionsControllerProvider
-                                        .notifier)
-                                    .setOsExperienceSearchItemChecked(
-                                        _osExperienceSearchItemChecked);
+                                _osExperienceSearchItemChecked[_osExperience.indexOf(osExperience)] = [false, false, false, false, false, false];
+                                ref.read(searchConditionsControllerProvider.notifier).setOsExperienceSearchItemChecked(_osExperienceSearchItemChecked);
                               }
                             });
                           },
                           controlAffinity: ListTileControlAffinity.leading,
                           contentPadding: EdgeInsets.zero,
                         ),
-                        if (_osExperienceSearchChecked[
-                                _osExperience.indexOf(osExperience)] ==
-                            true)
+                        if (_osExperienceSearchChecked[_osExperience.indexOf(osExperience)] == true)
                           Padding(
                             padding: const EdgeInsets.only(left: 16.0),
                             child: Wrap(
@@ -1090,32 +925,12 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
                               children: _yearsCategories.map((yearsCategory) {
                                 return CheckboxListTile(
                                   title: Text(yearsCategory),
-                                  value: _osExperienceSearchItemChecked[
-                                          _osExperience.indexOf(osExperience)]
-                                      [_yearsCategories.indexOf(yearsCategory)],
+                                  value: _osExperienceSearchItemChecked[_osExperience.indexOf(osExperience)][_yearsCategories.indexOf(yearsCategory)],
                                   onChanged: (value) {
-                                    setState(() {
-                                      _osExperienceSearchItemChecked[
-                                          _osExperience.indexOf(
-                                              osExperience)][_yearsCategories
-                                          .indexOf(yearsCategory)] = value!;
-                                      ref
-                                          .read(
-                                              searchConditionsControllerProvider
-                                                  .notifier)
-                                          .setOsExperienceSearchItemChecked(
-                                              _osExperienceSearchItemChecked);
-                                      ref
-                                          .read(
-                                              searchConditionsControllerProvider
-                                                  .notifier)
-                                          .setSearchSettingOsExperienceFlag(
-                                              true);
-                                      ref
-                                          .read(
-                                              searchConditionsControllerProvider
-                                                  .notifier)
-                                          .setSearchSettingFlag(true);
+                                    setState(() {_osExperienceSearchItemChecked[_osExperience.indexOf(osExperience)][_yearsCategories.indexOf(yearsCategory)] = value!;
+                                      ref.read(searchConditionsControllerProvider.notifier).setOsExperienceSearchItemChecked(_osExperienceSearchItemChecked);
+                                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingOsExperienceFlag(true);
+                                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingFlag(true);
                                     });
                                   },
                                   controlAffinity:
@@ -1159,42 +974,22 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
                       children: [
                         CheckboxListTile(
                           title: Text(cloudTech),
-                          value: _cloudTechnologySearchChecked[
-                              _cloudTech.indexOf(cloudTech)],
+                          value: _cloudTechnologySearchChecked[_cloudTech.indexOf(cloudTech)],
                           onChanged: (value) {
                             setState(() {
-                              _cloudTechnologySearchChecked[
-                                  _cloudTech.indexOf(cloudTech)] = value!;
-                              ref
-                                  .read(searchConditionsControllerProvider
-                                      .notifier)
-                                  .setCloudTechnologySearchChecked(
-                                      _cloudTechnologySearchChecked);
+                              _cloudTechnologySearchChecked[_cloudTech.indexOf(cloudTech)] = value!;
+                              ref.read(searchConditionsControllerProvider.notifier).setCloudTechnologySearchChecked(_cloudTechnologySearchChecked);
                               if (value == false) {
                                 //大項目がチェックがFALSEになったら小項目もFALSEにする
-                                _cloudTechnologySearchItemChecked[
-                                    _cloudTech.indexOf(cloudTech)] = [
-                                  false,
-                                  false,
-                                  false,
-                                  false,
-                                  false,
-                                  false
-                                ];
-                                ref
-                                    .read(searchConditionsControllerProvider
-                                        .notifier)
-                                    .setCloudTechnologySearchItemChecked(
-                                        _cloudTechnologySearchItemChecked);
+                                _cloudTechnologySearchItemChecked[_cloudTech.indexOf(cloudTech)] = [false, false, false, false, false, false];
+                                ref.read(searchConditionsControllerProvider.notifier).setCloudTechnologySearchItemChecked(_cloudTechnologySearchItemChecked);
                               }
                             });
                           },
                           controlAffinity: ListTileControlAffinity.leading,
                           contentPadding: EdgeInsets.zero,
                         ),
-                        if (_cloudTechnologySearchChecked[
-                                _cloudTech.indexOf(cloudTech)] ==
-                            true)
+                        if (_cloudTechnologySearchChecked[_cloudTech.indexOf(cloudTech)] == true)
                           Padding(
                             padding: const EdgeInsets.only(left: 16.0),
                             child: Wrap(
@@ -1202,32 +997,13 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
                               children: _yearsCategories.map((yearsCategory) {
                                 return CheckboxListTile(
                                   title: Text(yearsCategory),
-                                  value: _cloudTechnologySearchItemChecked[
-                                          _cloudTech.indexOf(cloudTech)]
-                                      [_yearsCategories.indexOf(yearsCategory)],
+                                  value: _cloudTechnologySearchItemChecked[_cloudTech.indexOf(cloudTech)][_yearsCategories.indexOf(yearsCategory)],
                                   onChanged: (value) {
                                     setState(() {
-                                      _cloudTechnologySearchItemChecked[
-                                              _cloudTech.indexOf(cloudTech)][
-                                          _yearsCategories
-                                              .indexOf(yearsCategory)] = value!;
-                                      ref
-                                          .read(
-                                              searchConditionsControllerProvider
-                                                  .notifier)
-                                          .setCloudTechnologySearchItemChecked(
-                                              _cloudTechnologySearchItemChecked);
-                                      ref
-                                          .read(
-                                              searchConditionsControllerProvider
-                                                  .notifier)
-                                          .setSearchSettingCloudTechnologyFlag(
-                                              true);
-                                      ref
-                                          .read(
-                                              searchConditionsControllerProvider
-                                                  .notifier)
-                                          .setSearchSettingFlag(true);
+                                      _cloudTechnologySearchItemChecked[_cloudTech.indexOf(cloudTech)][_yearsCategories.indexOf(yearsCategory)] = value!;
+                                      ref.read(searchConditionsControllerProvider.notifier).setCloudTechnologySearchItemChecked(_cloudTechnologySearchItemChecked);
+                                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingCloudTechnologyFlag(true);
+                                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingFlag(true);
                                     });
                                   },
                                   controlAffinity:
@@ -1274,25 +1050,11 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
                           onChanged: (value) {
                             setState(() {
                               _toolSearchChecked[_tool.indexOf(tool)] = value!;
-                              ref
-                                  .read(searchConditionsControllerProvider
-                                      .notifier)
-                                  .setToolSearchChecked(_toolSearchChecked);
+                              ref.read(searchConditionsControllerProvider.notifier).setToolSearchChecked(_toolSearchChecked);
                               if (value == false) {
                                 //大項目がチェックがFALSEになったら小項目もFALSEにする
-                                _toolSearchItemChecked[_tool.indexOf(tool)] = [
-                                  false,
-                                  false,
-                                  false,
-                                  false,
-                                  false,
-                                  false
-                                ];
-                                ref
-                                    .read(searchConditionsControllerProvider
-                                        .notifier)
-                                    .setToolSearchItemChecked(
-                                        _toolSearchItemChecked);
+                                _toolSearchItemChecked[_tool.indexOf(tool)] = [false, false, false, false, false, false];
+                                ref.read(searchConditionsControllerProvider.notifier).setToolSearchItemChecked(_toolSearchItemChecked);
                               }
                             });
                           },
@@ -1307,31 +1069,13 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
                               children: _yearsCategories.map((yearsCategory) {
                                 return CheckboxListTile(
                                   title: Text(yearsCategory),
-                                  value: _toolSearchItemChecked[
-                                          _tool.indexOf(tool)]
-                                      [_yearsCategories.indexOf(yearsCategory)],
+                                  value: _toolSearchItemChecked[_tool.indexOf(tool)][_yearsCategories.indexOf(yearsCategory)],
                                   onChanged: (value) {
                                     setState(() {
-                                      _toolSearchItemChecked[
-                                              _tool.indexOf(tool)][
-                                          _yearsCategories
-                                              .indexOf(yearsCategory)] = value!;
-                                      ref
-                                          .read(
-                                              searchConditionsControllerProvider
-                                                  .notifier)
-                                          .setToolSearchItemChecked(
-                                              _toolSearchItemChecked);
-                                      ref
-                                          .read(
-                                              searchConditionsControllerProvider
-                                                  .notifier)
-                                          .setSearchSettingToolFlag(true);
-                                      ref
-                                          .read(
-                                              searchConditionsControllerProvider
-                                                  .notifier)
-                                          .setSearchSettingFlag(true);
+                                      _toolSearchItemChecked[_tool.indexOf(tool)][_yearsCategories.indexOf(yearsCategory)] = value!;
+                                      ref.read(searchConditionsControllerProvider.notifier).setToolSearchItemChecked(_toolSearchItemChecked);
+                                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingToolFlag(true);
+                                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingFlag(true);
                                     });
                                   },
                                   controlAffinity:
