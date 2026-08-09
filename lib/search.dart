@@ -141,7 +141,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         centerTitle: true,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back,color: Colors.black,),
           onPressed: () {
             // 全ての画面履歴を消して最初の画面に戻る場合、または特定のトップ画面に戻る場合
             // もし '/top' という名前でトップ画面を登録しているなら pushNamedAndRemoveUntil
