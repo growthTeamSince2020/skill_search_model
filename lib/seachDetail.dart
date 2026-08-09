@@ -6,6 +6,7 @@ import 'package:skill_search_model/common/constData.dart';
 import 'dart:async';
 import 'package:skill_search_model/search.dart';
 import 'package:skill_search_model/model/searchConditionsDto.dart';
+import 'package:skill_search_model/utils/skillChipGroup.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class SeachDetailPage extends ConsumerStatefulWidget {
@@ -17,8 +18,11 @@ class SeachDetailPage extends ConsumerStatefulWidget {
 
 class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
   bool _isInitialized = false;
+  // メインクラスで定義されているカラー
+  late final Color surfaceColor = Theme.of(context).colorScheme.surface;
   // メインカラーを定義
-  static const themeGreen = Color(0xFF808000);
+  static const themeColor = Color(0xFF2E7D32);
+
 
   // searchConProviderのインスタンスを取得
   late SearchConditionsDto searchConditions;
@@ -41,25 +45,7 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
     constData.searchAgeSelectStringUnder50
   ];
 
-  final Map<String, String?> _teamRolesChecked = {};
-  final Map<String, String?> _processesChecked = {};
-  final Map<String, String?> _codeLanguagesChecked = {};
-  final Map<String, String?> _dbExperienceChecked = {};
-  final Map<String, String?> _osExperienceChecked = {};
-  final Map<String, String?> _cloudTechChecked = {};
-  final Map<String, String?> _toolChecked = {};
   int? _ageChecked;
-
-  //工程取得リスト(小項目のチェック状態)などの初期化
-  final List<List<bool>> _search4ItemCheckedInit = [
-    [false, false, false, false], //要件定義
-    [false, false, false, false], //基本設計
-    [false, false, false, false], //詳細設計
-    [false, false, false, false], //コーディング
-    [false, false, false, false], //単体
-    [false, false, false, false], //結合
-    [false, false, false, false] //保守
-  ];
 
   //工程取得(フラグ)リスト
   late bool _searchSettingFlagProcess;
@@ -137,16 +123,8 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
         _cloudTech = List<String>.from(data['cloud_technology'] ?? []);
         _tool = List<String>.from(data['tool'] ?? []);
         _experienceCategories =
-            List<String>.from(data['experience_category'] ?? []);
+        List<String>.from(data['experience_category'] ?? []);
         _yearsCategories = List<String>.from(data['years_category'] ?? []);
-
-        _teamRolesChecked.clear();
-        _processesChecked.clear();
-        _codeLanguagesChecked.clear();
-        _dbExperienceChecked.clear();
-        _osExperienceChecked.clear();
-        _cloudTechChecked.clear();
-        _toolChecked.clear();
       });
     });
   }
@@ -176,35 +154,35 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
       // これにより、UI側のCheckboxが持っている古いvalueとの接続を強制的に断ち切ります
       _processSearchChecked = List<bool>.filled(_processes.length, false);
       _processSearchItemChecked = List.generate(_processes.length,
-          (_) => List<bool>.filled(_experienceCategories.length, false));
+              (_) => List<bool>.filled(_experienceCategories.length, false));
 
       _teamRolesSearchChecked = List<bool>.filled(_teamRoles.length, false);
       _teamRolesSearchItemChecked = List.generate(_teamRoles.length,
-          (_) => List<bool>.filled(_experienceCategories.length, false));
+              (_) => List<bool>.filled(_yearsCategories.length, false));
 
       _codeLanguagesSearchChecked =
-          List<bool>.filled(_codeLanguages.length, false);
+      List<bool>.filled(_codeLanguages.length, false);
       _codeLanguagesSearchItemChecked = List.generate(_codeLanguages.length,
-          (_) => List<bool>.filled(_yearsCategories.length, false));
+              (_) => List<bool>.filled(_yearsCategories.length, false));
 
       _dbExperienceSearchChecked =
-          List<bool>.filled(_dbExperience.length, false);
+      List<bool>.filled(_dbExperience.length, false);
       _dbExperienceSearchItemChecked = List.generate(_dbExperience.length,
-          (_) => List<bool>.filled(_yearsCategories.length, false));
+              (_) => List<bool>.filled(_yearsCategories.length, false));
 
       _osExperienceSearchChecked =
-          List<bool>.filled(_osExperience.length, false);
+      List<bool>.filled(_osExperience.length, false);
       _osExperienceSearchItemChecked = List.generate(_osExperience.length,
-          (_) => List<bool>.filled(_yearsCategories.length, false));
+              (_) => List<bool>.filled(_yearsCategories.length, false));
 
       _cloudTechnologySearchChecked =
-          List<bool>.filled(_cloudTech.length, false);
+      List<bool>.filled(_cloudTech.length, false);
       _cloudTechnologySearchItemChecked = List.generate(_cloudTech.length,
-          (_) => List<bool>.filled(_yearsCategories.length, false));
+              (_) => List<bool>.filled(_yearsCategories.length, false));
 
       _toolSearchChecked = List<bool>.filled(_tool.length, false);
       _toolSearchItemChecked = List.generate(_tool.length,
-          (_) => List<bool>.filled(_yearsCategories.length, false));
+              (_) => List<bool>.filled(_yearsCategories.length, false));
 
       // 4. Provider側のデータも最後に同期して消去する
       // readを使用して、Notifierに直接「すべて消せ」と命令する
@@ -224,8 +202,6 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
     });
 
     // 5. 画面を閉じる
-    // ※Navigator.pop(context) の前に微小な待ち時間を入れるとより安定しますが、
-    // 基本的にはこの順番であれば2回目以降も反映されます。
     Navigator.pop(context);
   }
 
@@ -270,7 +246,8 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
 
     //経験言語(大項目チェックリスト、フラグ)の値の初期化　各フラグが全てfalse（初期値）だったらフラグをfalseにする
     bool codeLanguagesSearchItemCheckedAllFalse =
-        _codeLanguagesSearchItemChecked.every((row) => row.every((element) => element == false));
+    _codeLanguagesSearchItemChecked
+        .every((row) => row.every((element) => element == false));
     if (codeLanguagesSearchItemCheckedAllFalse) {
       notifier.codeLanguagesClear();
     } else {
@@ -297,8 +274,8 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
 
     //クラウド経験(大項目チェックリスト、フラグ)の値の初期値　各フラグの全てがfalse（初期値）だったらフラグをfalseにする
     bool cloudTechnologySearchItemCheckedAllFalse =
-        _cloudTechnologySearchItemChecked
-            .every((row) => row.every((element) => element == false));
+    _cloudTechnologySearchItemChecked
+        .every((row) => row.every((element) => element == false));
     if (cloudTechnologySearchItemCheckedAllFalse) {
       notifier.cloudTechnologyClear();
     } else {
@@ -388,12 +365,18 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
         return {
           'team_role': docTeamRole.data()!['team_role'] as List<dynamic>,
           'process': docProcess.data()!['process'] as List<dynamic>,
-          'code_languages':docCodeLanguages.data()!['code_languages'] as List<dynamic>,
-          'experience_category': docExperienceCategory.data()!['experience_category'] as List<dynamic>,
-          'years_category':docYearsCategory.data()!['years_category'] as List<dynamic>,
-          'db_experience':docDbExperience.data()!['db_experience'] as List<dynamic>,
-          'os_experience':docOsExperience.data()!['os_experience'] as List<dynamic>,
-          'cloud_technology':docCloudTech.data()!['cloud_technology'] as List<dynamic>,
+          'code_languages':
+          docCodeLanguages.data()!['code_languages'] as List<dynamic>,
+          'experience_category': docExperienceCategory
+              .data()!['experience_category'] as List<dynamic>,
+          'years_category':
+          docYearsCategory.data()!['years_category'] as List<dynamic>,
+          'db_experience':
+          docDbExperience.data()!['db_experience'] as List<dynamic>,
+          'os_experience':
+          docOsExperience.data()!['os_experience'] as List<dynamic>,
+          'cloud_technology':
+          docCloudTech.data()!['cloud_technology'] as List<dynamic>,
           'tool': docTool.data()!['tool'] as List<dynamic>,
         };
       } else {
@@ -409,7 +392,6 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
   Widget build(BuildContext context) {
     // searchConProviderのインスタンスを取得
     searchConditions = ref.watch(searchConditionsControllerProvider);
-
     if (!_isInitialized && _processes.isNotEmpty) {
       //年齢の値を取得
       _ageChecked = searchConditions.getAgeDropdownSelectedValue;
@@ -418,7 +400,7 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
       _searchSettingFlagProcess = searchConditions.getSearchSettingProcessFlag!;
       //工程経験(大項目のチェック状態)の値を取得 List.from を使って「コピー」を作る
       _processSearchChecked =
-          List<bool>.from(searchConditions.getProcessSearchChecked!);
+      List<bool>.from(searchConditions.getProcessSearchChecked!);
       //工程経験(小項目のチェック状態)の値を取得
       _processSearchItemChecked = searchConditions.getProcessSearchItemChecked!
           .map((list) => List<bool>.from(list))
@@ -426,10 +408,10 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
 
       //チーム経験(フラグ)の値を取得
       _searchSettingFlagTeamRoles =
-          searchConditions.getSearchSettingTeamRolesFlag!;
+      searchConditions.getSearchSettingTeamRolesFlag!;
       //チーム経験(大項目のチェック状態)の値を取得
       _teamRolesSearchChecked =
-          List<bool>.from(searchConditions.getTeamRolesSearchChecked!);
+      List<bool>.from(searchConditions.getTeamRolesSearchChecked!);
       //チーム経験(小項目のチェック状態)の値を取得
       _teamRolesSearchItemChecked = searchConditions
           .getTeamRolesSearchItemChecked!
@@ -438,10 +420,10 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
 
       //経験言語(フラグ)の値を取得
       _searchSettingFlagCodeLanguages =
-          searchConditions.getSearchSettingCodeLanguagesFlag!;
+      searchConditions.getSearchSettingCodeLanguagesFlag!;
       //経験言語(大項目のチェック状態)の値を取得
       _codeLanguagesSearchChecked =
-          List<bool>.from(searchConditions.getCodeLanguagesSearchChecked!);
+      List<bool>.from(searchConditions.getCodeLanguagesSearchChecked!);
       //経験言語(小項目のチェック状態)の値を取得
       _codeLanguagesSearchItemChecked = searchConditions
           .getCodeLanguagesSearchItemChecked!
@@ -450,10 +432,10 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
 
       //DB経験(フラグ)の値を取得
       _searchSettingFlagDbExperience =
-          searchConditions.getSearchSettingDbExperienceFlag!;
+      searchConditions.getSearchSettingDbExperienceFlag!;
       //DB経験(大項目のチェック状態)の値を取得
       _dbExperienceSearchChecked =
-          List<bool>.from(searchConditions.getDbExperienceSearchChecked!);
+      List<bool>.from(searchConditions.getDbExperienceSearchChecked!);
       //DB経験(小項目のチェック状態)の値を取得
       _dbExperienceSearchItemChecked = searchConditions
           .getDbExperienceSearchItemChecked!
@@ -462,23 +444,25 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
 
       //OS経験(フラグ)の値を取得
       _searchSettingFlagOsExperience =
-          searchConditions.getSearchSettingOsExperienceFlag!;
+      searchConditions.getSearchSettingOsExperienceFlag!;
       //OS経験(大項目のチェック状態)の値を取得
       _osExperienceSearchChecked =
-          List<bool>.from(searchConditions.getOsExperienceSearchChecked!);
+      List<bool>.from(searchConditions.getOsExperienceSearchChecked!);
       //OS経験(小項目のチェック状態)の値を取得
-      _osExperienceSearchItemChecked = searchConditions.getOsExperienceSearchItemChecked!
+      _osExperienceSearchItemChecked = searchConditions
+          .getOsExperienceSearchItemChecked!
           .map((list) => List<bool>.from(list))
           .toList();
 
       //クラウド経験(フラグ)の値を取得
       _searchSettingFlagCloudTechnology =
-          searchConditions.getSearchSettingCloudTechnologyFlag!;
+      searchConditions.getSearchSettingCloudTechnologyFlag!;
       //クラウド経験(大項目のチェック状態)の値を取得
       _cloudTechnologySearchChecked =
-          List<bool>.from(searchConditions.getCloudTechnologySearchChecked!);
+      List<bool>.from(searchConditions.getCloudTechnologySearchChecked!);
       //クラウド経験(小項目のチェック状態)の値を取得
-      _cloudTechnologySearchItemChecked = searchConditions.getCloudTechnologySearchItemChecked!
+      _cloudTechnologySearchItemChecked = searchConditions
+          .getCloudTechnologySearchItemChecked!
           .map((list) => List<bool>.from(list))
           .toList();
 
@@ -486,7 +470,7 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
       _searchSettingFlagTool = searchConditions.getSearchSettingToolFlag!;
       //ツール経験(大項目のチェック状態)の値を取得
       _toolSearchChecked =
-          List<bool>.from(searchConditions.getToolSearchChecked!);
+      List<bool>.from(searchConditions.getToolSearchChecked!);
       //ツール経験(小項目のチェック状態)の値を取得
       _toolSearchItemChecked = searchConditions.getToolSearchItemChecked!
           .map((list) => List<bool>.from(list))
@@ -500,55 +484,46 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
     }
     return Scaffold(
         appBar: AppBar(
+          backgroundColor: surfaceColor,//画面タイトルの色,
+          iconTheme: const IconThemeData(color: Colors.black),//戻る矢印
           title: Row(
             children: [
-              const Padding(
-                padding: EdgeInsets.only(right: 12.0),
-                child: Icon(Icons.filter_alt_outlined, color: themeGreen, size: 24.0),
-              ),
-              Text(
-                constData.engineerSearchDitail,
-                style: const TextStyle(
-                  color: Colors.black87,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                ),
-              ),
+              Container(
+                  margin: const EdgeInsets.only(right: 10),
+                  child: const Icon(
+                    Icons.filter_list_alt,
+                    color: themeColor,
+                  )),
+              const Text(constData.engineerSearchDitail,
+                  style: TextStyle(color: Colors.black)),
             ],
           ),
-          shape: const Border(
+          shape: Border(
             bottom: BorderSide(
-              color: themeGreen,
-              width: 1.0,
-            ),
+              color: Colors.black,
+              width: 1.0
+            )
           ),
-          backgroundColor: Colors.white,
-          foregroundColor: themeGreen,
-          centerTitle: true,
-          elevation: 0,
         ),
         body: ListView(
           children: <Widget>[
+            // --- 年齢（単一選択のためRadioListTileのまま） ---
             Container(
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 border: Border(
-                  bottom: BorderSide(
-                    color: Colors.grey,
-                    width: 1.0,
-                  ),
+                  bottom: BorderSide(color: Colors.grey, width: 1.0),
                 ),
               ),
               child: ExpansionTile(
-                title: Row(
+                title: const Row(
                   children: [
-                    Icon(Icons.group), // ここに表示したいアイコンを指定します
-                    SizedBox(width: 8), // アイコンとテキストの間にスペースを追加
+                    Icon(Icons.group),
+                    SizedBox(width: 8),
                     Text("年齢"),
                   ],
                 ),
                 initiallyExpanded: _ageChecked == 0 ? false : true,
-                //初期値０以外ならtrueで自動で開く
-                childrenPadding: EdgeInsets.only(left: 16.0, bottom: 16.0),
+                childrenPadding: const EdgeInsets.only(left: 16.0, bottom: 16.0),
                 children: _ageList.map((ageKey) {
                   return RadioListTile<String>(
                     title: Padding(
@@ -557,16 +532,17 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
                     ),
                     value: ageKey,
                     groupValue: _ageList[
-                        searchConditions.getAgeDropdownSelectedValue as int],
-                    // groupValue: _ageList[_ageChecked!],
+                    searchConditions.getAgeDropdownSelectedValue as int],
                     onChanged: (value) {
                       setState(() {
                         logger.i('value: ${_ageList.indexOf(value!)}');
-                        ref.read(searchConditionsControllerProvider.notifier)
+                        ref
+                            .read(searchConditionsControllerProvider.notifier)
                             .setAgeDropdownSelectedValue(
-                                _ageList.indexOf(value!));
+                            _ageList.indexOf(value!));
                         if (_ageChecked != 0) {
-                          ref.read(searchConditionsControllerProvider.notifier)
+                          ref
+                              .read(searchConditionsControllerProvider.notifier)
                               .setSearchSettingFlag(true); //検索設定フラグを更新
                         }
                       });
@@ -577,520 +553,178 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
                 }).toList(),
               ),
             ),
-            Container(
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: Colors.grey,
-                    width: 1.0,
-                  ),
-                ),
-              ),
-              child: ExpansionTile(
-                title: Row(
-                  children: [
-                    Icon(Icons.group), // ここに表示したいアイコンを指定します
-                    SizedBox(width: 8), // アイコンとテキストの間にスペースを追加
-                    Text('チーム役割'),
-                  ],
-                ),
-                initiallyExpanded: _searchSettingFlagTeamRoles, //trueだと自動で開く
-                childrenPadding: EdgeInsets.only(left: 16.0, bottom: 16.0),
-                children: _teamRoles.map((teamRoles) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      CheckboxListTile(
-                        title: Text(teamRoles),
-                        //1 value: _teamRolesChecked[teamRoles] != null,
-                        value: _teamRolesSearchChecked[_teamRoles.indexOf(teamRoles)],
-                        onChanged: (value) {
-                          setState(() {
-                            //2
-                            _teamRolesSearchChecked[_teamRoles.indexOf(teamRoles)] = value!;
-                            ref.read(searchConditionsControllerProvider.notifier)
-                                .setTeamRolesSearchChecked(_teamRolesSearchChecked);
-                            if (value == false) {
-                              //大項目がチェックがFALSEになったら小項目もFALSEにする
-                              _teamRolesSearchItemChecked[
-                                  _teamRoles.indexOf(teamRoles)] = [false, false, false, false, false, false];
-                              ref.read(searchConditionsControllerProvider.notifier)
-                                  .setTeamRolesSearchItemChecked(_teamRolesSearchItemChecked);
-                            }
-                          });
-                        },
-                        controlAffinity: ListTileControlAffinity.leading,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      if (_teamRolesSearchChecked[_teamRoles.indexOf(teamRoles)] == true)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 16.0),
-                          child: Wrap(
-                            spacing: 8.0,
-                            children: _yearsCategories.map((yearsCategory) {
-                              return CheckboxListTile(
-                                title: Text(yearsCategory),
-                                value: _teamRolesSearchItemChecked[_teamRoles.indexOf(teamRoles)][_yearsCategories.indexOf(yearsCategory)],
-                                onChanged: (value) {
-                                  setState(() {
-                                    _teamRolesSearchItemChecked[_teamRoles.indexOf(teamRoles)][_yearsCategories.indexOf(yearsCategory)] = value!;
-                                    ref.read(searchConditionsControllerProvider.notifier).setTeamRolesSearchItemChecked(_teamRolesSearchItemChecked);
-                                    ref.read(searchConditionsControllerProvider.notifier).setSearchSettingTeamRolesFlag(true);
-                                    ref.read(searchConditionsControllerProvider.notifier).setSearchSettingFlag(true);
-                                  });
-                                },
-                                controlAffinity:
-                                    ListTileControlAffinity.leading,
-                                contentPadding: EdgeInsets.zero,
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                    ],
-                  );
-                }).toList(),
-              ),
+
+            // --- チーム役割 ---
+            _buildSkillSection(
+              icon: Icons.group,
+              title: 'チーム役割',
+              items: _teamRoles,
+              levels: _yearsCategories,
+              mainChecked: _teamRolesSearchChecked,
+              itemChecked: _teamRolesSearchItemChecked,
+              initiallyExpanded: _searchSettingFlagTeamRoles,
+              onUpdated: (newMain, newItem, hasAny) {
+                setState(() {
+                  _teamRolesSearchChecked = newMain;
+                  _teamRolesSearchItemChecked = newItem;
+                  final notifier =
+                  ref.read(searchConditionsControllerProvider.notifier);
+                  notifier.setTeamRolesSearchChecked(_teamRolesSearchChecked);
+                  notifier.setTeamRolesSearchItemChecked(
+                      _teamRolesSearchItemChecked);
+                  notifier.setSearchSettingTeamRolesFlag(hasAny);
+                  notifier.setSearchSettingFlag(true);
+                });
+              },
             ),
-            Container(
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: Colors.grey,
-                    width: 1.0,
-                  ),
-                ),
-              ),
-              child: ExpansionTile(
-                title: Row(
-                  children: [
-                    Icon(Icons.account_tree),
-                    SizedBox(width: 8),
-                    Text('工程'),
-                  ],
-                ),
-                initiallyExpanded: _searchSettingFlagProcess, //trueだと自動で開く
-                children: _processes.map((process) {
-                  return Padding(
-                    padding: const EdgeInsets.only(left: 16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CheckboxListTile(
-                          title: Text(process),
-                          value: _processSearchChecked[_processes.indexOf(process)],
-                          onChanged: (value) {
-                            setState(() {
-                              _processSearchChecked[_processes.indexOf(process)] = value!;
-                              ref.read(searchConditionsControllerProvider.notifier).setProcessSearchChecked(_processSearchChecked);
-                              if (value == false) {
-                                //大項目がチェックがFALSEになったら小項目もFALSEにする
-                                _processSearchItemChecked[_processes.indexOf(
-                                    process)] = [false, false, false, false];
-                                ref.read(searchConditionsControllerProvider.notifier).setProcessSearchItemChecked(_processSearchItemChecked);
-                              } else {
-                                ref.read(searchConditionsControllerProvider.notifier).setSearchSettingProcessFlag(true);
-                              }
-                            });
-                          },
-                          controlAffinity: ListTileControlAffinity.leading,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                        if (_processSearchChecked[_processes.indexOf(process)] == true)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 16.0),
-                            child: Wrap(
-                              spacing: 8.0,
-                              children: _experienceCategories.map((experienceCategory) {
-                                return CheckboxListTile(
-                                  title: Text(experienceCategory),
-                                  value: _processSearchItemChecked[_processes.indexOf(process)][_experienceCategories.indexOf(experienceCategory)],
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _processSearchItemChecked[_processes.indexOf(process)][_experienceCategories.indexOf(experienceCategory)] = value!;
-                                      ref.read(searchConditionsControllerProvider.notifier).setProcessSearchItemChecked(_processSearchItemChecked);
-                                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingProcessFlag(true);
-                                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingFlag(true);
-                                    });
-                                  },
-                                  controlAffinity:
-                                      ListTileControlAffinity.leading,
-                                  contentPadding: EdgeInsets.zero,
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
+
+            // --- 工程 ---
+            _buildSkillSection(
+              icon: Icons.account_tree,
+              title: '工程',
+              items: _processes,
+              levels: _experienceCategories,
+              mainChecked: _processSearchChecked,
+              itemChecked: _processSearchItemChecked,
+              initiallyExpanded: _searchSettingFlagProcess,
+              onUpdated: (newMain, newItem, hasAny) {
+                setState(() {
+                  _processSearchChecked = newMain;
+                  _processSearchItemChecked = newItem;
+                  final notifier =
+                  ref.read(searchConditionsControllerProvider.notifier);
+                  notifier.setProcessSearchChecked(_processSearchChecked);
+                  notifier
+                      .setProcessSearchItemChecked(_processSearchItemChecked);
+                  notifier.setSearchSettingProcessFlag(hasAny);
+                  notifier.setSearchSettingFlag(true);
+                });
+              },
             ),
-            Container(
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: Colors.grey,
-                    width: 1.0,
-                  ),
-                ),
-              ),
-              child: ExpansionTile(
-                title: Row(
-                  children: [
-                    Icon(Icons.developer_mode), // Icons.code アイコンを使用
-                    SizedBox(width: 8),
-                    Text('経験言語'),
-                  ],
-                ),
-                initiallyExpanded: _searchSettingFlagCodeLanguages,
-                //trueだと自動で開く
-                childrenPadding: EdgeInsets.only(left: 16.0, bottom: 16.0),
-                children: _codeLanguages.map((codeLanguages) {
-                  return Padding(
-                    padding: const EdgeInsets.only(left: 16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CheckboxListTile(
-                          title: Text(codeLanguages),
-                          value: _codeLanguagesSearchChecked[_codeLanguages.indexOf(codeLanguages)],
-                          onChanged: (value) {
-                            setState(() {
-                              _codeLanguagesSearchChecked[_codeLanguages.indexOf(codeLanguages)] = value!;
-                              ref.read(searchConditionsControllerProvider.notifier).setCodeLanguagesSearchChecked(_codeLanguagesSearchChecked);
-                              if (value == false) {
-                                //大項目がチェックがFALSEになったら小項目もFALSEにする
-                                _codeLanguagesSearchItemChecked[_codeLanguages.indexOf(codeLanguages)] = [false, false, false, false, false, false];
-                                ref.read(searchConditionsControllerProvider.notifier).setCodeLanguagesSearchItemChecked(_codeLanguagesSearchItemChecked);
-                              }
-                            });
-                          },
-                          controlAffinity: ListTileControlAffinity.leading,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                        if (_codeLanguagesSearchChecked[_codeLanguages.indexOf(codeLanguages)] == true)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 16.0),
-                            child: Wrap(
-                              spacing: 8.0,
-                              children: _yearsCategories.map((yearsCategory) {
-                                return CheckboxListTile(
-                                  title: Text(yearsCategory),
-                                  value: _codeLanguagesSearchItemChecked[_codeLanguages.indexOf(codeLanguages)][_yearsCategories.indexOf(yearsCategory)],
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _codeLanguagesSearchItemChecked[_codeLanguages.indexOf(codeLanguages)][_yearsCategories.indexOf(yearsCategory)] = value!;
-                                      // ここでフラグを更新すると、次回表示時や再ビルド時に反映されます
-                                      if (value == true) {
-                                        _searchSettingFlagCodeLanguages = true;
-                                      }
-                                      _codeLanguagesSearchItemChecked[_codeLanguages.indexOf(codeLanguages)][_yearsCategories.indexOf(yearsCategory)] = value!;
-                                      ref.read(searchConditionsControllerProvider.notifier).setCodeLanguagesSearchItemChecked(_codeLanguagesSearchItemChecked);
-                                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingCodeLanguagesFlag(true);
-                                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingFlag(true);
-                                    });
-                                  },
-                                  controlAffinity:
-                                      ListTileControlAffinity.leading,
-                                  contentPadding: EdgeInsets.zero,
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
+
+            // --- 経験言語 ---
+            _buildSkillSection(
+              icon: Icons.developer_mode,
+              title: '経験言語',
+              items: _codeLanguages,
+              levels: _yearsCategories,
+              mainChecked: _codeLanguagesSearchChecked,
+              itemChecked: _codeLanguagesSearchItemChecked,
+              initiallyExpanded: _searchSettingFlagCodeLanguages,
+              onUpdated: (newMain, newItem, hasAny) {
+                setState(() {
+                  _codeLanguagesSearchChecked = newMain;
+                  _codeLanguagesSearchItemChecked = newItem;
+                  final notifier =
+                  ref.read(searchConditionsControllerProvider.notifier);
+                  notifier.setCodeLanguagesSearchChecked(
+                      _codeLanguagesSearchChecked);
+                  notifier.setCodeLanguagesSearchItemChecked(
+                      _codeLanguagesSearchItemChecked);
+                  notifier.setSearchSettingCodeLanguagesFlag(hasAny);
+                  notifier.setSearchSettingFlag(true);
+                });
+              },
             ),
-            Container(
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: Colors.grey,
-                    width: 1.0,
-                  ),
-                ),
-              ),
-              child: ExpansionTile(
-                title: Row(
-                  children: [
-                    Icon(Icons.storage),
-                    SizedBox(width: 8),
-                    Text('DB言語'),
-                  ],
-                ),
-                initiallyExpanded: _searchSettingFlagDbExperience, //trueだと自動で開く
-                childrenPadding: EdgeInsets.only(left: 16.0, bottom: 16.0),
-                children: _dbExperience.map((dbExperience) {
-                  return Padding(
-                    padding: const EdgeInsets.only(left: 16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CheckboxListTile(
-                          title: Text(dbExperience),
-                          value: _dbExperienceSearchChecked[_dbExperience.indexOf(dbExperience)],
-                          onChanged: (value) {
-                            setState(() {
-                              _dbExperienceSearchChecked[_dbExperience.indexOf(dbExperience)] = value!;
-                              ref.read(searchConditionsControllerProvider.notifier).setDbExperienceSearchChecked(_dbExperienceSearchChecked);
-                              if (value == false) {
-                                //大項目がチェックがFALSEになったら小項目もFALSEにする
-                                _dbExperienceSearchItemChecked[_dbExperience.indexOf(dbExperience)] = [false, false, false, false, false, false];
-                                ref.read(searchConditionsControllerProvider.notifier).setDbExperienceSearchItemChecked(_dbExperienceSearchItemChecked);
-                              }
-                            });
-                          },
-                          controlAffinity: ListTileControlAffinity.leading,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                        if (_dbExperienceSearchChecked[_dbExperience.indexOf(dbExperience)] == true)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 16.0),
-                            child: Wrap(
-                              spacing: 8.0,
-                              children: _yearsCategories.map((yearsCategory) {
-                                return CheckboxListTile(
-                                  title: Text(yearsCategory),
-                                  value: _dbExperienceSearchItemChecked[_dbExperience.indexOf(dbExperience)][_yearsCategories.indexOf(yearsCategory)],
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _dbExperienceSearchItemChecked[_dbExperience.indexOf(dbExperience)][_yearsCategories.indexOf(yearsCategory)] = value!;
-                                      ref.read(searchConditionsControllerProvider.notifier).setDbExperienceSearchItemChecked(_dbExperienceSearchItemChecked);
-                                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingDbExperienceFlag(true);
-                                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingFlag(true);
-                                    });
-                                  },
-                                  controlAffinity:
-                                      ListTileControlAffinity.leading,
-                                  contentPadding: EdgeInsets.zero,
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
+
+            // --- DB言語 ---
+            _buildSkillSection(
+              icon: Icons.storage,
+              title: 'DB言語',
+              items: _dbExperience,
+              levels: _yearsCategories,
+              mainChecked: _dbExperienceSearchChecked,
+              itemChecked: _dbExperienceSearchItemChecked,
+              initiallyExpanded: _searchSettingFlagDbExperience,
+              onUpdated: (newMain, newItem, hasAny) {
+                setState(() {
+                  _dbExperienceSearchChecked = newMain;
+                  _dbExperienceSearchItemChecked = newItem;
+                  final notifier =
+                  ref.read(searchConditionsControllerProvider.notifier);
+                  notifier
+                      .setDbExperienceSearchChecked(_dbExperienceSearchChecked);
+                  notifier.setDbExperienceSearchItemChecked(
+                      _dbExperienceSearchItemChecked);
+                  notifier.setSearchSettingDbExperienceFlag(hasAny);
+                  notifier.setSearchSettingFlag(true);
+                });
+              },
             ),
-            Container(
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: Colors.grey,
-                    width: 1.0,
-                  ),
-                ),
-              ),
-              child: ExpansionTile(
-                title: Row(
-                  children: [
-                    Icon(Icons.memory), // Icons.code アイコンを使用
-                    SizedBox(width: 8),
-                    Text('OS言語'),
-                  ],
-                ),
-                initiallyExpanded: _searchSettingFlagOsExperience, //trueだと自動で開く
-                childrenPadding: EdgeInsets.only(left: 16.0, bottom: 16.0),
-                children: _osExperience.map((osExperience) {
-                  return Padding(
-                    padding: const EdgeInsets.only(left: 16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CheckboxListTile(
-                          title: Text(osExperience),
-                          value: _osExperienceSearchChecked[_osExperience.indexOf(osExperience)],
-                          onChanged: (value) {
-                            setState(() {
-                              _osExperienceSearchChecked[_osExperience.indexOf(osExperience)] = value!;
-                              ref.read(searchConditionsControllerProvider.notifier).setOsExperienceSearchChecked(_osExperienceSearchChecked);
-                              if (value == false) {
-                                //大項目がチェックがFALSEになったら小項目もFALSEにする
-                                _osExperienceSearchItemChecked[_osExperience.indexOf(osExperience)] = [false, false, false, false, false, false];
-                                ref.read(searchConditionsControllerProvider.notifier).setOsExperienceSearchItemChecked(_osExperienceSearchItemChecked);
-                              }
-                            });
-                          },
-                          controlAffinity: ListTileControlAffinity.leading,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                        if (_osExperienceSearchChecked[_osExperience.indexOf(osExperience)] == true)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 16.0),
-                            child: Wrap(
-                              spacing: 8.0,
-                              children: _yearsCategories.map((yearsCategory) {
-                                return CheckboxListTile(
-                                  title: Text(yearsCategory),
-                                  value: _osExperienceSearchItemChecked[_osExperience.indexOf(osExperience)][_yearsCategories.indexOf(yearsCategory)],
-                                  onChanged: (value) {
-                                    setState(() {_osExperienceSearchItemChecked[_osExperience.indexOf(osExperience)][_yearsCategories.indexOf(yearsCategory)] = value!;
-                                      ref.read(searchConditionsControllerProvider.notifier).setOsExperienceSearchItemChecked(_osExperienceSearchItemChecked);
-                                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingOsExperienceFlag(true);
-                                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingFlag(true);
-                                    });
-                                  },
-                                  controlAffinity:
-                                      ListTileControlAffinity.leading,
-                                  contentPadding: EdgeInsets.zero,
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
+
+            // --- OS言語 ---
+            _buildSkillSection(
+              icon: Icons.memory,
+              title: 'OS言語',
+              items: _osExperience,
+              levels: _yearsCategories,
+              mainChecked: _osExperienceSearchChecked,
+              itemChecked: _osExperienceSearchItemChecked,
+              initiallyExpanded: _searchSettingFlagOsExperience,
+              onUpdated: (newMain, newItem, hasAny) {
+                setState(() {
+                  _osExperienceSearchChecked = newMain;
+                  _osExperienceSearchItemChecked = newItem;
+                  final notifier =
+                  ref.read(searchConditionsControllerProvider.notifier);
+                  notifier
+                      .setOsExperienceSearchChecked(_osExperienceSearchChecked);
+                  notifier.setOsExperienceSearchItemChecked(
+                      _osExperienceSearchItemChecked);
+                  notifier.setSearchSettingOsExperienceFlag(hasAny);
+                  notifier.setSearchSettingFlag(true);
+                });
+              },
             ),
-            Container(
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: Colors.grey,
-                    width: 1.0,
-                  ),
-                ),
-              ),
-              child: ExpansionTile(
-                title: Row(
-                  children: [
-                    Icon(Icons.cloud),
-                    SizedBox(width: 8),
-                    Text('クラウド技術'),
-                  ],
-                ),
-                initiallyExpanded: _searchSettingFlagCloudTechnology,
-                //trueだと自動で開く
-                childrenPadding: EdgeInsets.only(left: 16.0, bottom: 16.0),
-                children: _cloudTech.map((cloudTech) {
-                  return Padding(
-                    padding: const EdgeInsets.only(left: 16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CheckboxListTile(
-                          title: Text(cloudTech),
-                          value: _cloudTechnologySearchChecked[_cloudTech.indexOf(cloudTech)],
-                          onChanged: (value) {
-                            setState(() {
-                              _cloudTechnologySearchChecked[_cloudTech.indexOf(cloudTech)] = value!;
-                              ref.read(searchConditionsControllerProvider.notifier).setCloudTechnologySearchChecked(_cloudTechnologySearchChecked);
-                              if (value == false) {
-                                //大項目がチェックがFALSEになったら小項目もFALSEにする
-                                _cloudTechnologySearchItemChecked[_cloudTech.indexOf(cloudTech)] = [false, false, false, false, false, false];
-                                ref.read(searchConditionsControllerProvider.notifier).setCloudTechnologySearchItemChecked(_cloudTechnologySearchItemChecked);
-                              }
-                            });
-                          },
-                          controlAffinity: ListTileControlAffinity.leading,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                        if (_cloudTechnologySearchChecked[_cloudTech.indexOf(cloudTech)] == true)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 16.0),
-                            child: Wrap(
-                              spacing: 8.0,
-                              children: _yearsCategories.map((yearsCategory) {
-                                return CheckboxListTile(
-                                  title: Text(yearsCategory),
-                                  value: _cloudTechnologySearchItemChecked[_cloudTech.indexOf(cloudTech)][_yearsCategories.indexOf(yearsCategory)],
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _cloudTechnologySearchItemChecked[_cloudTech.indexOf(cloudTech)][_yearsCategories.indexOf(yearsCategory)] = value!;
-                                      ref.read(searchConditionsControllerProvider.notifier).setCloudTechnologySearchItemChecked(_cloudTechnologySearchItemChecked);
-                                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingCloudTechnologyFlag(true);
-                                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingFlag(true);
-                                    });
-                                  },
-                                  controlAffinity:
-                                      ListTileControlAffinity.leading,
-                                  contentPadding: EdgeInsets.zero,
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
+
+            // --- クラウド技術 ---
+            _buildSkillSection(
+              icon: Icons.cloud,
+              title: 'クラウド技術',
+              items: _cloudTech,
+              levels: _yearsCategories,
+              mainChecked: _cloudTechnologySearchChecked,
+              itemChecked: _cloudTechnologySearchItemChecked,
+              initiallyExpanded: _searchSettingFlagCloudTechnology,
+              onUpdated: (newMain, newItem, hasAny) {
+                setState(() {
+                  _cloudTechnologySearchChecked = newMain;
+                  _cloudTechnologySearchItemChecked = newItem;
+                  final notifier =
+                  ref.read(searchConditionsControllerProvider.notifier);
+                  notifier.setCloudTechnologySearchChecked(
+                      _cloudTechnologySearchChecked);
+                  notifier.setCloudTechnologySearchItemChecked(
+                      _cloudTechnologySearchItemChecked);
+                  notifier.setSearchSettingCloudTechnologyFlag(hasAny);
+                  notifier.setSearchSettingFlag(true);
+                });
+              },
             ),
-            Container(
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: Colors.grey,
-                    width: 1.0,
-                  ),
-                ),
-              ),
-              child: ExpansionTile(
-                title: Row(
-                  children: [
-                    Icon(Icons.build),
-                    SizedBox(width: 8),
-                    Text('ツール'),
-                  ],
-                ),
-                initiallyExpanded: _searchSettingFlagTool, //trueだと自動で開く
-                childrenPadding: EdgeInsets.only(left: 16.0, bottom: 16.0),
-                children: _tool.map((tool) {
-                  return Padding(
-                    padding: const EdgeInsets.only(left: 16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CheckboxListTile(
-                          title: Text(tool),
-                          value: _toolSearchChecked[_tool.indexOf(tool)],
-                          onChanged: (value) {
-                            setState(() {
-                              _toolSearchChecked[_tool.indexOf(tool)] = value!;
-                              ref.read(searchConditionsControllerProvider.notifier).setToolSearchChecked(_toolSearchChecked);
-                              if (value == false) {
-                                //大項目がチェックがFALSEになったら小項目もFALSEにする
-                                _toolSearchItemChecked[_tool.indexOf(tool)] = [false, false, false, false, false, false];
-                                ref.read(searchConditionsControllerProvider.notifier).setToolSearchItemChecked(_toolSearchItemChecked);
-                              }
-                            });
-                          },
-                          controlAffinity: ListTileControlAffinity.leading,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                        if (_toolSearchChecked[_tool.indexOf(tool)] == true)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 16.0),
-                            child: Wrap(
-                              spacing: 8.0,
-                              children: _yearsCategories.map((yearsCategory) {
-                                return CheckboxListTile(
-                                  title: Text(yearsCategory),
-                                  value: _toolSearchItemChecked[_tool.indexOf(tool)][_yearsCategories.indexOf(yearsCategory)],
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _toolSearchItemChecked[_tool.indexOf(tool)][_yearsCategories.indexOf(yearsCategory)] = value!;
-                                      ref.read(searchConditionsControllerProvider.notifier).setToolSearchItemChecked(_toolSearchItemChecked);
-                                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingToolFlag(true);
-                                      ref.read(searchConditionsControllerProvider.notifier).setSearchSettingFlag(true);
-                                    });
-                                  },
-                                  controlAffinity:
-                                      ListTileControlAffinity.leading,
-                                  contentPadding: EdgeInsets.zero,
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
+
+            // --- ツール ---
+            _buildSkillSection(
+              icon: Icons.build,
+              title: 'ツール',
+              items: _tool,
+              levels: _yearsCategories,
+              mainChecked: _toolSearchChecked,
+              itemChecked: _toolSearchItemChecked,
+              initiallyExpanded: _searchSettingFlagTool,
+              onUpdated: (newMain, newItem, hasAny) {
+                setState(() {
+                  _toolSearchChecked = newMain;
+                  _toolSearchItemChecked = newItem;
+                  final notifier =
+                  ref.read(searchConditionsControllerProvider.notifier);
+                  notifier.setToolSearchChecked(_toolSearchChecked);
+                  notifier.setToolSearchItemChecked(_toolSearchItemChecked);
+                  notifier.setSearchSettingToolFlag(hasAny);
+                  notifier.setSearchSettingFlag(true);
+                });
+              },
             ),
+
             ElevatedButton(
               onPressed: _searchEngineer,
               child: Text('検索'),
@@ -1113,5 +747,60 @@ class _SeachDetailPageState extends ConsumerState<SeachDetailPage> {
             ),
           ],
         ));
+  }
+
+  /// 7カテゴリ共通のセクションビルダー。
+  /// SkillChipGroup が返す Map<int, Set<int>> を、既存の
+  /// List<bool> / List<List<bool>> 形式に変換してから onUpdated へ渡す。
+  /// これにより Provider・_checkExperience・_searchEngineer は無改修で動く。
+  Widget _buildSkillSection({
+    required IconData icon,
+    required String title,
+    required List<String> items,
+    required List<String> levels,
+    required List<bool> mainChecked,
+    required List<List<bool>> itemChecked,
+    required bool initiallyExpanded,
+    required void Function(
+        List<bool> newMain, List<List<bool>> newItem, bool hasAny)
+    onUpdated,
+  }) {
+    // データ未取得のタイミングでは何も描画しない（初期化前のnull安全対策）
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Colors.grey, width: 1.0)),
+      ),
+      child: ExpansionTile(
+        title: Row(
+          children: [
+            Icon(icon),
+            const SizedBox(width: 8),
+            Text(title),
+          ],
+        ),
+        initiallyExpanded: initiallyExpanded,
+        childrenPadding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 16.0),
+        children: [
+          Align(
+            alignment: Alignment.topLeft,
+            child: SkillChipGroup(
+              items: items,
+              levels: levels,
+              selected: checkedListsToMap(mainChecked, itemChecked),
+              onChanged: (newMap) {
+                // 既存構造と同じ形（要素数固定のList）を維持したまま複製
+                final newMain = List<bool>.from(mainChecked);
+                final newItem =
+                itemChecked.map((row) => List<bool>.from(row)).toList();
+                applyMapToCheckedLists(newMap, newMain, newItem);
+                onUpdated(newMain, newItem, newMap.isNotEmpty);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
