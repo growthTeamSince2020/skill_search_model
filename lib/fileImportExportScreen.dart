@@ -1,11 +1,12 @@
 import 'dart:convert';
+import 'dart:io'; // 追加
 import 'dart:typed_data';
-// Web専用のHTML操作ライブラリをインポート（これがないとFileUploadInputElementが使えません）
-import 'dart:html' as html;
+// import 'dart:html' as html; // ← 削除（ビルドエラーの原因）
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:skill_search_model/utils/uiUtils.dart';
 import 'package:csv/csv.dart';
+import 'package:file_picker/file_picker.dart'; // 追加
 import 'exportCSV.dart';
 import 'exportExcel.dart';
 import 'importCSV.dart';
@@ -23,8 +24,7 @@ class _CsvImportExportScreenState extends State<CsvImportExportScreen> {
   bool _isImporting = false;
   String _importMessage = '';
 
-  // ★ 追加：現在選択されているフォーマット (0: CSV, 1: Excel)
-  int _selectedFormat = 0;
+  int _selectedFormat = 0; // 0: CSV, 1: Excel
 
   // --- エクスポート処理 ---
   Future<void> _exportData() async {
@@ -34,10 +34,8 @@ class _CsvImportExportScreenState extends State<CsvImportExportScreen> {
       final docs = snapshot.docs.where((doc) => doc.id != 'sequenceNo').toList();
 
       if (_selectedFormat == 0) {
-        // CSVエクスポート (既存)
         await CSVExporter.export(docs);
       } else {
-        // ★ Excelエクスポートを実行
         await ExcelExporter.export(docs);
       }
     } catch (e) {
@@ -47,23 +45,25 @@ class _CsvImportExportScreenState extends State<CsvImportExportScreen> {
     }
   }
 
-  // --- ファイル選択処理 ---
-  void _pickAndImportFile() {
-    // ★ 選択中のフォーマットによって許可する拡張子を変える
-    String acceptType = _selectedFormat == 0 ? '.csv' : '.xlsx';
-    final html.FileUploadInputElement uploadInput = html.FileUploadInputElement()..accept = acceptType;
+  // --- ファイル選択処理 (macOS/デスクトップ対応版) ---
+  Future<void> _pickAndImportFile() async {
+    try {
+      // 選択中のフォーマットによって許可する拡張子を変える
+      List<String> allowedExtensions = _selectedFormat == 0 ? ['csv'] : ['xlsx'];
 
-    uploadInput.onChange.listen((e) {
-      final files = uploadInput.files;
-      if (files!.isEmpty) return;
+      FilePickerResult? result = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: allowedExtensions,
+        withData: true,
+      );
 
-      final reader = html.FileReader();
-      reader.readAsArrayBuffer(files[0]);
-      reader.onLoadEnd.listen((e) {
-        _importData(reader.result as Uint8List);
-      });
-    });
-    uploadInput.click();
+      if (result != null && result.files.single.bytes != null) {
+        // インポート実行
+        _importData(result.files.single.bytes!);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("ファイル選択エラー: $e")));
+    }
   }
 
   // --- インポート実行処理 ---
@@ -76,32 +76,31 @@ class _CsvImportExportScreenState extends State<CsvImportExportScreen> {
     try {
       String result;
       if (_selectedFormat == 0) {
-        // CSVインポート
+        // CSVExporter ではなく CSVImporter を呼ぶ
         result = await CSVImporter.import(fileBytes);
       } else {
-        // Excelインポート
+        // ExcelExporter ではなく ExcelImporter を呼ぶ
         result = await ExcelImporter.import(fileBytes);
       }
 
       setState(() => _importMessage = result);
 
-      // ★ UIUtils の共通ダイアログを使用
-      UIUtils.showResultDialog(
+      // ★ await を追加
+      await UIUtils.showResultDialog(
         context,
         title: '処理完了',
         message: result,
-        isError: false, // 成功なので false
+        isError: false,
       );
 
     } catch (e) {
       setState(() => _importMessage = "エラー：$e");
-
-      // ★ エラー時も UIUtils を使用
-      UIUtils.showResultDialog(
+      // ★ await を追加
+      await UIUtils.showResultDialog(
         context,
         title: 'エラー',
         message: e.toString(),
-        isError: true, // エラーなので true
+        isError: true,
       );
     } finally {
       setState(() => _isImporting = false);
@@ -117,7 +116,6 @@ class _CsvImportExportScreenState extends State<CsvImportExportScreen> {
           padding: const EdgeInsets.all(24.0),
           child: Column(
             children: [
-              // ★ フォーマット選択スイッチ
               Container(
                 width: 300,
                 padding: const EdgeInsets.symmetric(vertical: 20),
@@ -130,7 +128,7 @@ class _CsvImportExportScreenState extends State<CsvImportExportScreen> {
                   onSelectionChanged: (Set<int> newSelection) {
                     setState(() {
                       _selectedFormat = newSelection.first;
-                      _importMessage = ''; // フォーマットを変えたらメッセージをクリア
+                      _importMessage = '';
                     });
                   },
                 ),
@@ -165,7 +163,6 @@ class _CsvImportExportScreenState extends State<CsvImportExportScreen> {
     );
   }
 
-  // インポート/エクスポートそれぞれの操作パネルを作るための共通UI部品
   Widget _buildCard({
     required IconData icon,
     required Color color,
@@ -187,7 +184,6 @@ class _CsvImportExportScreenState extends State<CsvImportExportScreen> {
             const SizedBox(height: 8),
             Text(description, textAlign: TextAlign.center),
             const SizedBox(height: 24),
-            // 処理中ならぐるぐるを表示、そうでなければボタンを表示
             isLoading
                 ? const CircularProgressIndicator()
                 : UIUtils.buildPrimaryButton(
@@ -195,7 +191,6 @@ class _CsvImportExportScreenState extends State<CsvImportExportScreen> {
               onPressed: onPressed,
               color: color,
             ),
-            // 処理完了後のメッセージがあれば表示
             if (message != null && message.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 16.0),

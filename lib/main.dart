@@ -3,103 +3,156 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 
+// 各画面のインポート
+import 'accountManagementScreen.dart';
+import 'permissionSettingsScreen.dart';
 import 'common/firebaseOptions.dart';
+import 'common/constData.dart';
 import 'loginScreen.dart';
 import 'menuScreen.dart';
+import 'companySetupScreen.dart';
+import 'staffSetupScreen.dart';
+import 'forgotPasswordScreen.dart'; // ★ 追加
 
-// アプリの起動時に最初に実行されるメイン関数
 void main() async {
-  // Flutterのウィジェットの初期化を確実に行う
   WidgetsFlutterBinding.ensureInitialized();
+  usePathUrlStrategy();
 
-  // Firebaseの初期化（プラットフォームごとの設定を読み込む）
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // RiverpodのProviderScopeでアプリを包み、状態管理を有効にして起動
   runApp(const ProviderScope(child: MyApp()));
 }
 
-// --- Providers & Models (状態管理とデータモデル) ---
-
-// Firebase Authのログイン状態（ログイン中か未ログインか）を監視するプロバイダー
+// 認証状態の監視
 final authStateProvider = StreamProvider<User?>((ref) {
-  // ユーザーの認証状態が変化するたびに最新情報を流す
   return FirebaseAuth.instance.authStateChanges();
 });
 
-// アプリ内で利用するユーザー情報のデータモデル
+// アプリ内ユーザー情報の定義
 class AppUser {
-  final String uid;         // ユーザー固有ID
-  final String role;        // 権限ロール（admin, editor, viewerなど）
-  final Map<String, dynamic> permissions; // 詳細な操作権限
+  final String uid;
+  final String role;
+  final Map<String, dynamic> permissions;
+  final String displayName;
+  final String email;
+  final String photoURL;
+  final String companyCode;
 
-  AppUser({required this.uid, required this.role, required this.permissions});
+  AppUser({
+    required this.uid,
+    required this.role,
+    required this.permissions,
+    this.displayName = '',
+    this.email = '',
+    this.photoURL = '',
+    this.companyCode = '',
+  });
 
-  // Firestoreのデータ（Map形式）からAppUserクラスのインスタンスを作成するファクトリメソッド
   factory AppUser.fromMap(Map<String, dynamic> data) {
-    // 権限データがMap形式かチェックし、不正ならデフォルト値を設定
     final Map<String, dynamic> rawPermissions = data['permissions'] is Map
         ? Map<String, dynamic>.from(data['permissions'])
         : {'canEdit': false, 'canExport': false};
 
+    // ★ ロールが未設定（null/空）の場合は 'member' (一般ユーザー) をデフォルトにする
+    String role = data['role'] ?? constData.roleMember;
+    if (role.isEmpty) role = constData.roleMember;
+
     return AppUser(
       uid: data['uid'] ?? '',
-      role: data['role'] ?? 'viewer',
+      role: role,
       permissions: rawPermissions,
+      displayName: data['displayName'] ?? '',
+      email: data['email'] ?? '',
+      photoURL: data['photoURL'] ?? '',
+      companyCode: data['companyCode'] ?? '',
     );
   }
 }
 
-// Firestoreにあるユーザー詳細ドキュメントをリアルタイムで取得するプロバイダー
+// Firestoreのユーザー情報を監視するProvider
 final appUserProvider = StreamProvider<AppUser?>((ref) {
-  // まずログイン状態（authStateProvider）を監視
   final authUser = ref.watch(authStateProvider).value;
-
-  // 未ログインならnullを流すストリームを返す
   if (authUser == null) return Stream.value(null);
 
-  // ログイン中なら、Firestoreの 'users' コレクションから該当UIDのドキュメントを購読
   return FirebaseFirestore.instance
       .collection('users')
       .doc(authUser.uid)
       .snapshots()
       .map((snap) {
-    // ドキュメントが存在しない場合はnullを返す
     if (!snap.exists) return null;
-    // データをAppUserモデルに変換して返す
     return AppUser.fromMap(snap.data()!);
   });
 });
 
-// --- Main App Widget (アプリ全体の構造) ---
-
-// Riverpodの機能を使うため ConsumerWidget を継承
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // ログイン状態を監視（変化があれば自動で再描画される）
     final authState = ref.watch(authStateProvider);
 
     return MaterialApp(
-      debugShowCheckedModeBanner: false, // デバッグラベルを非表示
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        useMaterial3: true,              // Material 3 デザインを有効化
-        colorSchemeSeed: const Color(0xFF2E7D32), // 緑色をベースカラーに設定
-        brightness: Brightness.light,    // ライトモード
-        fontFamily: 'sans-serif',        // フォントをサンセリフ体に設定
+        useMaterial3: true,
+        colorSchemeSeed: constData.themeGreen, // テーマカラーを統一
+        brightness: Brightness.light,
+        fontFamily: 'sans-serif',
       ),
-      // ログイン状態に応じて表示する画面を分岐
+
+      // 動的ルーティングの設定
+      onGenerateRoute: (settings) {
+        if (settings.name == null) return null;
+        final uri = Uri.parse(settings.name!);
+        final path = uri.path.startsWith('/') ? uri.path : '/${uri.path}';
+
+        // 1. アカウント一覧
+        if (path == '/accounts') {
+          return MaterialPageRoute(builder: (context) => const AccountManagementScreen());
+        }
+
+        // 2. 権限設定
+        if (path == '/permissions') {
+          return MaterialPageRoute(builder: (context) => const PermissionSettingsScreen());
+        }
+
+        // 3. パスワード再設定画面 ★ 追加
+        if (path == '/forgot_password') {
+          return MaterialPageRoute(builder: (context) => const ForgotPasswordScreen());
+        }
+
+        // 4. 自社スタッフ招待の受諾
+        if (path.contains('staffSetup')) {
+          final String? invitationId = uri.queryParameters['id'];
+          if (invitationId != null) {
+            return MaterialPageRoute(
+              builder: (context) => StaffSetupScreen(invitationId: invitationId),
+            );
+          }
+        }
+
+        // 5. 新規企業オンボーディング（管理者招待用）
+        if (path.contains('setup')) {
+          String? code = uri.queryParameters['code'];
+          if (code == null && uri.pathSegments.isNotEmpty) {
+            code = uri.pathSegments.last;
+          }
+          if (code != null) {
+            return MaterialPageRoute(
+              builder: (context) => CompanySetupScreen(companyCode: code!),
+            );
+          }
+        }
+        return null;
+      },
+
       home: authState.when(
-        // データが取得できた場合
         data: (user) => user != null ? const MenuScreen() : const LoginScreen(),
-        // 読み込み中の表示
         loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-        // エラー発生時の表示
         error: (err, stack) => Scaffold(body: Center(child: Text('Error: $err'))),
       ),
     );

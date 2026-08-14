@@ -1,7 +1,8 @@
+import 'dart:io'; // htmlの代わりにioを使う
 import 'dart:typed_data';
 import 'package:excel/excel.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'dart:html' as html;
+import 'package:file_picker/file_picker.dart';
 
 import 'common/constData.dart';
 
@@ -11,7 +12,7 @@ class ExcelExporter {
     String sheetName = excel.tables.keys.first;
     var sheet = excel[sheetName];
 
-    // --- 1. ヘッダー作成 (結合なしの2重書き) ---
+    // --- 1. ヘッダー作成 (修正なし) ---
     _setDoubleHeader(sheet, 0, "技術者No");
     _setDoubleHeader(sheet, 1, "苗字");
     _setDoubleHeader(sheet, 2, "名");
@@ -28,7 +29,7 @@ class ExcelExporter {
     col = _setCategoryHeaders(sheet, col, "クラウド技術", constData.cloudItems);
     col = _setCategoryHeaders(sheet, col, "ツール", constData.toolItems);
 
-    // --- 2. データ書き込み ---
+    // --- 2. データ書き込み (修正なし) ---
     for (int i = 0; i < docs.length; i++) {
       var data = docs[i].data() as Map<String, dynamic>;
       int rowIndex = i + 2;
@@ -50,32 +51,33 @@ class ExcelExporter {
       cCol = _writeData(sheet, rowIndex, cCol, constData.toolItems, data['tool'], data['tool_years'], constData.toolYearsList);
     }
 
-    // --- 3. ダウンロード ---
+    // --- 3. 保存 (macOS/デスクトップ対応版) ---
     var fileBytes = excel.save();
     if (fileBytes != null) {
-      final blob = html.Blob([fileBytes]);
-      final url = html.Url.createObjectUrlFromBlob(blob);
-      final anchor = html.AnchorElement(href: url)
-        ..setAttribute("download", "engineer_export.xlsx")
-        ..click();
-      html.Url.revokeObjectUrl(url);
+      try {
+        // platform を削除して直接 saveFile を呼び出す
+        String? outputFile = await FilePicker.saveFile(
+          dialogTitle: 'エクスポートファイルの保存先を選択してください',
+          fileName: 'engineer_export.xlsx',
+          type: FileType.custom,
+          allowedExtensions: ['xlsx'],
+        );
+
+        if (outputFile != null) {
+          final file = File(outputFile);
+          await file.writeAsBytes(fileBytes);
+          print("保存完了: $outputFile");
+        }
+      } catch (e) {
+        print("ファイル保存エラー: $e");
+      }
     }
   }
 
-// 修正：1行目に項目名を書き、2行目は空欄にする
-// これにより、インポート時は1行目の項目名が正しく参照されます
+  // --- 以下、補助メソッド（修正なし） ---
   static void _setDoubleHeader(Sheet sheet, int col, String title) {
-    // 1行目 (rowIndex: 0) に項目名を書き込む
-    sheet.updateCell(
-        CellIndex.indexByColumnRow(columnIndex: col, rowIndex: 0),
-        TextCellValue(title)
-    );
-    // 2行目 (rowIndex: 1) はあえて空欄（TextCellValue("")）にする
-    // インポートロジックは「2行目が空なら1行目を見る」ので、これで正しく「年齢」等が認識されます
-    sheet.updateCell(
-        CellIndex.indexByColumnRow(columnIndex: col, rowIndex: 1),
-        TextCellValue("")
-    );
+    sheet.updateCell(CellIndex.indexByColumnRow(columnIndex: col, rowIndex: 0), TextCellValue(title));
+    sheet.updateCell(CellIndex.indexByColumnRow(columnIndex: col, rowIndex: 1), TextCellValue(""));
   }
 
   static int _setCategoryHeaders(Sheet sheet, int startCol, String categoryName, List<String> items) {

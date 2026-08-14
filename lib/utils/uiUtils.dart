@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:skill_search_model/common/constData.dart'; // ★ 追加
 
 /**
  * 【ユーティリティ】画面表示系共通部品クラス
@@ -10,34 +11,15 @@ import 'package:flutter/material.dart';
  */
 class UIUtils {
   /**
-   * ロール名の日本語変換
-   *
-   * システム内部のロール名（admin/editor/viewer）を、
-   * 画面表示用の日本語名称に変換します。
-   *
-   * @param role 変換対象のロール文字列（null許容）
-   * @return 対応する日本語名称（未設定時は「未設定」を返す）
+   * ロール名の日本語変換 (constDataの定義を使用するように修正)
    */
   static String getRoleDisplayName(String? role) {
-    switch (role) {
-      case 'admin':
-        return '管理者';
-      case 'editor':
-        return '編集者';
-      case 'viewer':
-        return '閲覧者';
-      default:
-        return '未設定';
-    }
+    // switch文から定数管理へ移行
+    return constData.roleLabels[role] ?? '未設定';
   }
 
   /**
    * 権限表示用テキストスタイルの取得
-   *
-   * ユーザー名の下などに表示する権限ラベル用の
-   * 共通テキストスタイル（緑色の太字、サイズ11）を返します。
-   *
-   * @return TextStyle 権限表示用の装飾オブジェクト
    */
   static TextStyle getRoleTextStyle() {
     return TextStyle(
@@ -49,14 +31,6 @@ class UIUtils {
 
   /**
    * 共通カードデザインの生成
-   *
-   * ダッシュボードやメインメニューで使用する、
-   * アイコンとタイトル付きの共通カードウィジェットを構築します。
-   *
-   * @param title カードに表示するタイトル
-   * @param icon 表示するアイコンデータ
-   * @param onTap タップ時のコールバック処理
-   * @return Widget 装飾済みのカードウィジェット
    */
   static Widget buildCommonCard({
     required String title,
@@ -88,8 +62,7 @@ class UIUtils {
               ),
               Text(
                 title,
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -99,24 +72,25 @@ class UIUtils {
   }
 
   /**
-   * 汎用メッセージダイアログの表示
-   *
-   * @param context コンテキスト
-   * @param title タイトル
-   * @param message 本文
-   * @param isError エラー表示かどうか（色味の切り替え用）
+   * 汎用メッセージダイアログの表示 (デザイン調整版)
    */
   static Future<void> showMessageDialog(
-    BuildContext context, {
-    required String title,
-    required String message,
-    bool isError = false,
-  }) {
+      BuildContext context, {
+        required String title,
+        required String message,
+        bool isError = false,
+      }) {
     return showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(title,
-            style: TextStyle(color: isError ? Colors.red : Colors.black87)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: isError ? Colors.red : Colors.black87,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         content: Text(message),
         actions: [
           TextButton(
@@ -130,12 +104,6 @@ class UIUtils {
 
   /**
    * アプリ標準のデザインを適用したテキストフィールドの構築
-   *
-   * @param controller コントローラー
-   * @param label ラベル名
-   * @param icon 左側に表示するアイコン
-   * @param errorText エラーメッセージ（ある場合）
-   * @param suffixText 右側に表示する補助テキスト（「駅」など）
    */
   static Widget buildPrimaryTextField({
     required TextEditingController controller,
@@ -158,12 +126,12 @@ class UIUtils {
             style: const TextStyle(color: Colors.black87, fontSize: 16),
             children: isRequired
                 ? [
-                    const TextSpan(
-                      text: ' *',
-                      style: TextStyle(
-                          color: Colors.red, fontWeight: FontWeight.bold),
-                    ),
-                  ]
+              const TextSpan(
+                text: ' *',
+                style: TextStyle(
+                    color: Colors.red, fontWeight: FontWeight.bold),
+              ),
+            ]
                 : [],
           ),
         ),
@@ -196,8 +164,6 @@ class UIUtils {
 
   /**
    * エラーリストのダイアログ表示
-   *
-   * 複数のバリデーションエラーをリスト形式で表示します。
    */
   static void showErrorListDialog(BuildContext context, List<String> errors) {
     showDialog(
@@ -216,10 +182,10 @@ class UIUtils {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: errors
                 .map((e) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Text('・ $e',
-                          style: const TextStyle(color: Colors.redAccent)),
-                    ))
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Text('・ $e',
+                  style: const TextStyle(color: Colors.redAccent)),
+            ))
                 .toList(),
           ),
         ),
@@ -235,17 +201,6 @@ class UIUtils {
 
   /**
    * スキル選択用のエクスパンジョンタイル
-   *
-   * チェックボックスと、選択時に表示されるラジオボタン群をセットにした
-   * 標準的なスキル入力UIを構築します。
-   *
-   * @param title タイトル
-   * @param icon アイコン
-   * @param items 選択肢リスト
-   * @param checkedMap 選択状態を管理するマップ
-   * @param categories ラジオボタンのカテゴリーリスト（「1年」「3年」など）
-   * @param onChanged 状態変更時のコールバック
-   * @return Widget 構築されたタイル
    */
   static Widget buildSkillExpansionTile({
     required String title,
@@ -290,7 +245,7 @@ class UIUtils {
                             value: cat,
                             groupValue: checkedMap[item],
                             materialTapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap,
+                            MaterialTapTargetSize.shrinkWrap,
                             onChanged: (String? val) => onChanged(item, val),
                           ),
                           GestureDetector(
@@ -313,14 +268,14 @@ class UIUtils {
   /**
    * 処理結果（成功・失敗）を表示する共通ダイアログ
    */
-  static void showResultDialog(
-    BuildContext context, {
-    required String title,
-    required String message,
-    required bool isError,
-    VoidCallback? onNext,
-  }) {
-    showDialog(
+  static Future<void> showResultDialog(
+      BuildContext context, {
+        required String title,
+        required String message,
+        required bool isError,
+        VoidCallback? onNext,
+      }) {
+    return showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
@@ -375,20 +330,16 @@ class UIUtils {
           foregroundColor: Colors.white,
           elevation: 0,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         child: Text(label,
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
       ),
     );
   }
+
   /**
    * 統計用：シンプルな横棒グラフ
-   *
-   * @param label 項目名（「20代」など）
-   * @param count 該当件数
-   * @param totalCount 全体件数（割合計算用）
-   * @param color バーの色
    */
   static Widget buildSimpleBarChart({
     required String label,
@@ -437,11 +388,6 @@ class UIUtils {
 
   /**
    * スキルと経験レベルを表示するバッジ（チップ）
-   *
-   * ダッシュボードの年齢層別スキル分布などで使用します。
-   *
-   * @param skill スキル名（「Java」など）
-   * @param level 経験レベル（「3年以上」など）
    */
   static Widget buildSkillLevelBadge(String skill, String level) {
     return Container(
@@ -450,7 +396,6 @@ class UIUtils {
       decoration: BoxDecoration(
         color: const Color(0xFF2E7D32).withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
-        // Border.sideのエラーを修正: Border.allを使用
         border: Border.all(color: const Color(0xFF2E7D32).withOpacity(0.3)),
       ),
       child: Row(
@@ -465,50 +410,30 @@ class UIUtils {
       ),
     );
   }
+
   /**
    * Firestoreから次のシーケンスIDを取得・更新する
-   *
-   * 「engineer/sequenceNo」ドキュメントの「currentId」を参照し、
-   * トランザクションを用いて安全にインクリメントした値を返します。
-   * ドキュメントが存在しない場合は、初期値 0 として作成されます。
-   *
-   * @param firestore Firestoreのインスタンス
-   * @return Future<int> 更新後の新しいID（1から開始）
    */
   static Future<int> getNextSequenceId(FirebaseFirestore firestore) async {
     final counterRef = firestore.collection('engineer').doc('sequenceNo');
 
     return firestore.runTransaction<int>((transaction) async {
       final snapshot = await transaction.get(counterRef);
-
-      // ドキュメントが存在しない場合は 0 とみなす
       final int currentId =
       snapshot.exists ? (snapshot.data()?['currentId'] as int? ?? 0) : 0;
-
       final int nextId = currentId + 1;
 
-      // 新しいIDで更新（ドキュメントがない場合は自動作成される）
       transaction.set(
         counterRef,
         {'currentId': nextId},
         SetOptions(merge: true),
       );
-
       return nextId;
     });
   }
 
   /**
    * ダッシュボード上部の統計サマリーカード
-   *
-   * レイアウトの柔軟性を高めるため、内部の Expanded を削除しました。
-   * 呼び出し側の Row 内などで Expanded や Flexible を使用して包んでください。
-   *
-   * @param label 統計項目名
-   * @param value 統計数値
-   * @param unit 単位（「名」など）
-   * @param icon アイコン
-   * @param color アイコンおよび装飾色
    */
   static Widget buildStatCard({
     required String label,
@@ -559,16 +484,6 @@ class UIUtils {
 
   /**
    * 削除確認ダイアログの表示と削除実行
-   *
-   * 削除確認のダイアログを表示し、ユーザーが承認した場合に
-   * 指定されたFirestoreドキュメントを削除します。
-   *
-   * @param context コンテキスト
-   * @param title ダイアログのタイトル（「技術者情報の削除」など）
-   * @param content ダイアログの本文
-   * @param collectionPath 削除対象のコレクション名
-   * @param documentId 削除対象のドキュメントID
-   * @return Future<bool> 実際に削除が行われた場合は true を返す
    */
   static Future<bool> showDeleteDialog(
       BuildContext context, {
@@ -580,7 +495,7 @@ class UIUtils {
     final bool? result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        // タイトル部分を Row にしてアイコンを追加
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
             const Icon(Icons.error_outline, color: Colors.red, size: 48),
@@ -613,7 +528,6 @@ class UIUtils {
             .delete();
         return true;
       } catch (e) {
-        // エラー時は前のダイアログを利用して通知
         showMessageDialog(context,
             title: 'エラー', message: '削除に失敗しました: $e', isError: true);
         return false;

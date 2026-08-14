@@ -1,18 +1,42 @@
 import 'dart:ui';
 
-class constData{
+class constData {
   // システム全体のバージョン
   static const String systemVersion = "1.0.0";
+
+  // 初回登録画面のベースURL (環境に合わせてここを書き換える)
+  static const String setupBaseUrl = "https://skill-search-model.web.app/setup";
+
+  // 企業コードを付与したURLを生成するメソッド
+  static String getInvitationUrl(String companyCode) {
+    return "$setupBaseUrl?code=$companyCode";
+  }
+
+  // 自社スタッフ招待画面のベースURL
+  // 「新規企業オンボーディング」(setupBaseUrl)とは別物。
+  // 招待ドキュメントID(staffInvitations/{id})を付与したURLを生成する。
+  static const String staffSetupBaseUrl =
+      "https://skill-search-model.web.app/staffSetup";
+
+  static String getStaffInvitationUrl(String invitationId) {
+    return "$staffSetupBaseUrl?id=$invitationId";
+  }
+
   // エンジニアドキュメントのデータ構造バージョン
   // (将来、保存形式を大幅に変えた際のデータ移行判定に使用)
   static const double dataSchemaVersion = 1.0;
+
   // メインカラーを登録・編集画面と統一
   static const Color themeGreen = Color(0xFF2E7D32);
 
-  static const String searchAgeSelectStringDefault = "" ;
-  static const String searchAgeSelectStringUnder30 = "30歳以下" ;
-  static const String searchAgeSelectStringUnder40 = "40歳以下" ;
-  static const String searchAgeSelectStringUnder50 = "50歳以下" ;
+  static const String searchAgeSelectStringDefault = "";
+
+  static const String searchAgeSelectStringUnder30 = "30歳以下";
+
+  static const String searchAgeSelectStringUnder40 = "40歳以下";
+
+  static const String searchAgeSelectStringUnder50 = "50歳以下";
+
   static const double rowItemfontsize = 7;
 
   // コレクション情報定義
@@ -27,33 +51,36 @@ class constData{
   static const String hyphen = "-";
   static const String blank = "";
   static const String colon = ":";
-  static const String slash= "/";
+  static const String slash = "/";
   static const String space = " ";
   static const String comma = ",";
   static const String rightBracket = "(";
   static const String leftBracket = ")";
-  static const String triangle= "△";//experience_categoryで1以下、years_categoryで1以下
-  static const String circle= "○";//experience_categoryで2、years_categoryで2or3以下
-  static const String doubleCircle= "◎";//experience_categoryで３、years_categoryで４以上
+  static const String triangle =
+      "△"; //experience_categoryで1以下、years_categoryで1以下
+  static const String circle =
+      "○"; //experience_categoryで2、years_categoryで2or3以下
+  static const String doubleCircle =
+      "◎"; //experience_categoryで３、years_categoryで４以上
   static const String experienced = "経験有";
   static const String noExperience = "経験無";
   static const String age = "歳";
 
   /* 検索画面 */
-  static const String engineerSearchNumber  = "検索件数";
-  static const String engineerSearchKen  = "件";
-  static const String engineerSearchStation1  = "最寄駅";
+  static const String engineerSearchNumber = "検索件数";
+  static const String engineerSearchKen = "件";
+  static const String engineerSearchStation1 = "最寄駅";
   static const String engineerSearchStation2 = "駅";
-  static const String engineerSearchCodeLanguages1  = "経験言語";
-  static const String engineerSearchProcess1  = "工程経験";
-  static const String engineerSearchDb1  = "DB経験";
-  static const String engineerSearchTeamRole1  = "チーム役割経験";
-  static const String engineerSearchOs1  = "OS経験";
-  static const String engineerSearchCloud1  = "クラウド技術";
-  static const String engineerSearchTool1  = "ツール経験";
-
+  static const String engineerSearchCodeLanguages1 = "経験言語";
+  static const String engineerSearchProcess1 = "工程経験";
+  static const String engineerSearchDb1 = "DB経験";
+  static const String engineerSearchTeamRole1 = "チーム役割経験";
+  static const String engineerSearchOs1 = "OS経験";
+  static const String engineerSearchCloud1 = "クラウド技術";
+  static const String engineerSearchTool1 = "ツール経験";
 
   /* 登録画面 */
+
   /// Firestore 'utilData' コレクション内のドキュメント名リスト
   static const List<String> masterDocs = [
     'team_role_item',
@@ -64,6 +91,7 @@ class constData{
     'cloud_technology_item',
     'tool_item',
   ];
+
   // --- 経験年数・レベルの選択肢文言（これらはUI表示の比較に使うため残す） ---
   static const String yearsLabel0 = "1年未満";
   static const String yearsLabel1 = "1年〜2年未満";
@@ -121,18 +149,92 @@ class constData{
   }
 
   /* 登録項目マスタ（Excelインポ・エクスポート用） */
-  static const List<String> teamRoleItems = ["PM経験", "PM補佐経験", "リーダ経験", "技術支援経験", "コンサル経験"];
-  static const List<String> processItems = ["要件定義", "基本設計", "詳細設計", "コーディング", "単体", "結合", "保守"];
-  static const List<String> langItems = ["C", "JAVA", "C#", "Go", "C++", "Python", "PHP", "Cobol", "JavaScript", "TypeScript", "Dart"];
-  static const List<String> dbItems = ["Oracle", "MySQL", "PostgresSQL", "SQLite", "MongoDB"];
-  static const List<String> osItems = ["Windows", "macOS", "Linux", "Android", "iOS", "WindowsServer"];
-  static const List<String> cloudItems = ["AWS", "Firebase", "GoogleCloud", "Azure"];
-  static const List<String> toolItems = ["Git", "svn", "Backlog", "Docker", "Jenkins", "Ansible", "androidStadio", "Visual Studio Code", "Eclipse", "IntelliJ IDEA", "Xcode"];
+  static const List<String> teamRoleItems = [
+    "PM経験",
+    "PM補佐経験",
+    "リーダ経験",
+    "技術支援経験",
+    "コンサル経験"
+  ];
+  static const List<String> processItems = [
+    "要件定義",
+    "基本設計",
+    "詳細設計",
+    "コーディング",
+    "単体",
+    "結合",
+    "保守"
+  ];
+  static const List<String> langItems = [
+    "C",
+    "JAVA",
+    "C#",
+    "Go",
+    "C++",
+    "Python",
+    "PHP",
+    "Cobol",
+    "JavaScript",
+    "TypeScript",
+    "Dart"
+  ];
+  static const List<String> dbItems = [
+    "Oracle",
+    "MySQL",
+    "PostgresSQL",
+    "SQLite",
+    "MongoDB"
+  ];
+  static const List<String> osItems = [
+    "Windows",
+    "macOS",
+    "Linux",
+    "Android",
+    "iOS",
+    "WindowsServer"
+  ];
+  static const List<String> cloudItems = [
+    "AWS",
+    "Firebase",
+    "GoogleCloud",
+    "Azure"
+  ];
+  static const List<String> toolItems = [
+    "Git",
+    "svn",
+    "Backlog",
+    "Docker",
+    "Jenkins",
+    "Ansible",
+    "androidStadio",
+    "Visual Studio Code",
+    "Eclipse",
+    "IntelliJ IDEA",
+    "Xcode"
+  ];
 
   // 選択肢のリスト化（indexOf で数値変換するため）
-  static const List<String> yearsList = [yearsLabel0, yearsLabel1, yearsLabel2, yearsLabel3, yearsLabel4, yearsLabel5];
-  static const List<String> processLevelList = [levelLabel0, levelLabel1, levelLabel2, levelLabel3];
-  static const List<String> toolYearsList = [simpleYearsLabel0, simpleYearsLabel1, simpleYearsLabel2, simpleYearsLabel3, simpleYearsLabel4];
+  static const List<String> yearsList = [
+    yearsLabel0,
+    yearsLabel1,
+    yearsLabel2,
+    yearsLabel3,
+    yearsLabel4,
+    yearsLabel5
+  ];
+  static const List<String> processLevelList = [
+    levelLabel0,
+    levelLabel1,
+    levelLabel2,
+    levelLabel3
+  ];
+  static const List<String> toolYearsList = [
+    simpleYearsLabel0,
+    simpleYearsLabel1,
+    simpleYearsLabel2,
+    simpleYearsLabel3,
+    simpleYearsLabel4
+  ];
 
   // ==========================================
   // 3. 内部用プライベートメソッド
@@ -147,6 +249,7 @@ class constData{
     if (label == yearsLabel5) return 5;
     return 0;
   }
+
   // 工程の変換値
   static int _getLevelValue(String? label) {
     if (label == levelLabel0) return 0;
@@ -168,19 +271,34 @@ class constData{
 
   // constData.dart のクラス内に追加してください
   static Map<String, List<String>> get engineerMasters => {
-    'team_role': teamRoleItems,
-    'team_role_years': yearsList,
-    'process': processItems,
-    'process_experience': processLevelList,
-    'code_languages': langItems,
-    'code_languages_years': yearsList,
-    'db_experience': dbItems,
-    'db_experience_years': yearsList,
-    'os_experience': osItems,
-    'os_experience_years': yearsList,
-    'cloud_technology': cloudItems,
-    'cloud_technology_years': yearsList,
-    'tool': toolItems,
-    'tool_years': toolYearsList,
+        'team_role': teamRoleItems,
+        'team_role_years': yearsList,
+        'process': processItems,
+        'process_experience': processLevelList,
+        'code_languages': langItems,
+        'code_languages_years': yearsList,
+        'db_experience': dbItems,
+        'db_experience_years': yearsList,
+        'os_experience': osItems,
+        'os_experience_years': yearsList,
+        'cloud_technology': cloudItems,
+        'cloud_technology_years': yearsList,
+        'tool': toolItems,
+        'tool_years': toolYearsList,
+      };
+
+  // --- ロール（権限レベル）定義 ---
+  static const String roleOwner = 'owner';
+  static const String roleAdmin = 'admin';
+  static const String roleMember = 'member';
+
+  // IDと表示名のマッピング（Dropdownや一覧表示用）
+  static const Map<String, String> roleLabels = {
+    roleOwner: '保守担当(owner)',
+    roleAdmin: '管理担当(admin)',
+    roleMember: 'メンバー(member)',
   };
+
+  // ロールIDのリスト（ループ処理用）
+  static const List<String> roleList = [roleOwner, roleAdmin, roleMember];
 }
