@@ -526,6 +526,8 @@ class UIUtils {
             .collection(collectionPath)
             .doc(documentId)
             .delete();
+        showMessageDialog(context,
+            title: '', message: '削除完了しました。');
         return true;
       } catch (e) {
         showMessageDialog(context,
@@ -534,5 +536,86 @@ class UIUtils {
       }
     }
     return false;
+  }
+
+  /**
+   * 複数ドキュメント削除確認ダイアログの表示と一括削除実行
+   *
+   * showDeleteDialog と同じ確認ダイアログUIを使い、
+   * ユーザーが承認した場合に複数のFirestoreドキュメントを
+   * WriteBatchでまとめて削除します。
+   *
+   * @param context コンテキスト
+   * @param title ダイアログのタイトル
+   * @param content ダイアログの本文
+   * @param collectionPath 削除対象のコレクション名
+   * @param documentIdList 削除対象のドキュメントIDのリスト
+   * @return Future<bool> 実際に削除が行われた場合は true を返す
+   */
+  static Future<bool> deleteListData_confirmDialog(
+      BuildContext context, {
+        required String title,
+        required String content,
+        required String collectionPath,
+        required List<String> documentIdList,
+      }) async {
+    final bool? result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 48),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+        content: Text(content),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('キャンセル', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('削除',
+                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (result != true) return false;
+    if (documentIdList.isEmpty)
+
+      return false;
+
+    try {
+      final firestore = FirebaseFirestore.instance;
+      // WriteBatchは1回500件までのため、500件ずつに分割してcommitする
+      const int chunkSize = 500;
+      for (int i = 0; i < documentIdList.length; i += chunkSize) {
+        final int end = (i + chunkSize > documentIdList.length)
+            ? documentIdList.length
+            : i + chunkSize;
+        final chunk = documentIdList.sublist(i, end);
+
+        final batch = firestore.batch();
+        for (final docId in chunk) {
+          batch.delete(firestore.collection(collectionPath).doc(docId));
+        }
+        await batch.commit();
+      }
+      showMessageDialog(context,
+          title: '', message: '削除完了しました。');
+      return true;
+    } catch (e) {
+      if (context.mounted) {
+        showMessageDialog(context,
+            title: 'エラー', message: '削除に失敗しました: $e', isError: true);
+      }
+      return false;
+    }
   }
 }

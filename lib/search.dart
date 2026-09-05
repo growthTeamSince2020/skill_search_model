@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skill_search_model/seachDetail.dart';
+import 'package:skill_search_model/utils/uiUtils.dart';
 import 'engineerSeachDetail.dart';
 import 'model/searchConditionsDto.dart';
 
@@ -15,7 +16,7 @@ class SearchPage extends ConsumerStatefulWidget {
 class _SearchPageState extends ConsumerState<SearchPage> {
   int totalCount = 0;
   final CollectionReference engineer =
-      FirebaseFirestore.instance.collection('engineer');
+  FirebaseFirestore.instance.collection('engineer');
   late SearchConditionsDto searchConditions;
 
   // マスターデータ用リスト
@@ -30,6 +31,81 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   // メインカラーを定義
   static const themeColor = Color(0xFF2E7D32);
   //static const themeColor = Color(0xFFFFFFFF);
+
+  // =========================================================
+  // ★ 選択モード関連の状態
+  // =========================================================
+  /// チェックボックスの表示/非表示を切り替えるフラグ
+  bool _selectionModeEnabled = false;
+
+  // 一覧削除機能フラグ　チェックボックス選択・一括削除機能　TRUE：可能、FALSE：不能
+  static const bool _canDeleteEngineer = true;
+
+  /// 選択中のドキュメントIDの集合
+  final Set<String> _selectedIds = {};
+
+  /// 直近にロードされた一覧（「全選択」機能で使用）
+  List<DocumentSnapshot> _lastLoadedDocs = [];
+
+  /// 選択モードのON/OFF切り替え
+  void _toggleSelectionMode() {
+    if (!_canDeleteEngineer) return;
+    setState(() {
+      _selectionModeEnabled = !_selectionModeEnabled;
+      // OFFにする時は選択状態をクリア
+      if (!_selectionModeEnabled) {
+        _selectedIds.clear();
+      }
+    });
+  }
+
+  /// 個別チェックボックスのON/OFF切り替え
+  void _toggleSelected(String docId) {
+    setState(() {
+      if (_selectedIds.contains(docId)) {
+        _selectedIds.remove(docId);
+      } else {
+        _selectedIds.add(docId);
+      }
+    });
+  }
+
+  /// 表示中の全件を選択 / 全解除
+  void _toggleSelectAll() {
+    setState(() {
+      final allIds = _lastLoadedDocs.map((d) => d.id).toSet();
+      final bool isAllSelected =
+          allIds.isNotEmpty && _selectedIds.containsAll(allIds);
+      if (isAllSelected) {
+        _selectedIds.removeAll(allIds);
+      } else {
+        _selectedIds.addAll(allIds);
+      }
+    });
+  }
+
+  /// 一括削除実行
+  Future<void> _bulkDelete() async {
+    if (!_canDeleteEngineer || _selectedIds.isEmpty) return;
+    final idList = _selectedIds.toList();
+
+    final bool deleted = await UIUtils.deleteListData_confirmDialog(
+      context,
+      title: '一括削除の確認',
+      content: '選択した ${idList.length} 件の技術者情報を完全に削除しますか？\nこの操作は取り消せません。',
+      collectionPath: 'engineer',
+      documentIdList: idList,
+    );
+
+    if (deleted && mounted) {
+      setState(() {
+        _selectedIds.clear();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${idList.length}件の技術者情報を削除しました')),
+      );
+    }
+  }
 
   //詳細検索アイコン押下時
   void _detailSearchScreen() {
@@ -149,6 +225,35 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             Navigator.of(context).popUntil((route) => route.isFirst);
           },
         ),
+        // ★追加②: 選択モード切替ボタン と 一括削除ボタン
+        actions: [
+          if (_canDeleteEngineer && _selectionModeEnabled)
+            IconButton(
+              // ★追加⑤: 全選択/全解除ボタン
+              icon: Icon(
+                _lastLoadedDocs.isNotEmpty &&
+                    _selectedIds.containsAll(
+                        _lastLoadedDocs.map((d) => d.id).toSet())
+                    ? Icons.check_box
+                    : Icons.check_box_outline_blank,
+              ),
+              tooltip: '全選択/全解除',
+              onPressed: _lastLoadedDocs.isEmpty ? null : _toggleSelectAll,
+            ),
+          if (_canDeleteEngineer)
+          IconButton(
+            icon: Icon(_selectionModeEnabled ? Icons.close : Icons.checklist),
+            tooltip: _selectionModeEnabled ? '選択モードを終了' : '選択モード',
+            onPressed: _toggleSelectionMode,
+          ),
+          if(_canDeleteEngineer && _selectionModeEnabled)
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              tooltip: '選択した項目を一括削除',
+              color: _selectedIds.isEmpty ? Colors.grey : Colors.red,
+              onPressed: _selectedIds.isEmpty ? null : _bulkDelete,
+            ),
+        ],
       ),
       body: FutureBuilder<List<DocumentSnapshot>>(
           future: getStream(),
@@ -162,6 +267,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             }
 
             final docs = snapshot.data;
+            _lastLoadedDocs = docs ?? []; // ★追加①: 全選択機能用にキャッシュ
 
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted && totalCount != (docs?.length ?? 0)) {
@@ -183,6 +289,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     itemCount: docs.length,
                     itemBuilder: (context, index) {
                       final data = docs[index].data() as Map<String, dynamic>;
+                      final docId = docs[index].id; // ★追加③: チェックボックス用にID取得
+                      final bool isSelected = _selectedIds.contains(docId); // ★追加③
 
                       return Card(
                         color: Color(0xFFFFFFFF),//カードの色
@@ -193,7 +301,12 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                         child: InkWell(
                           borderRadius: BorderRadius.circular(12),
                           onTap: () {
-                            _engineerDetailScreen(docs[index].id);
+                            // ★追加④: 選択モード時はチェック切替、通常時は詳細画面へ
+                            if (_selectionModeEnabled) {
+                              _toggleSelected(docId);
+                            } else {
+                              _engineerDetailScreen(docId);
+                            }
                           },
                           child: Padding(
                             padding: const EdgeInsets.all(16),
@@ -202,6 +315,16 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                               children: [
                                 Row(
                                   children: [
+                                    // ★追加③: 選択モード時のみチェックボックスを表示
+                                    if (_selectionModeEnabled)
+                                      Padding(
+                                        padding: const EdgeInsets.only(right: 4),
+                                        child: Checkbox(
+                                          value: isSelected,
+                                          activeColor: themeColor,
+                                          onChanged: (_) => _toggleSelected(docId),
+                                        ),
+                                      ),
                                     const CircleAvatar(
                                       backgroundColor: themeColor,//写真アイコンの色
                                       child: Icon(Icons.person, color: Colors.white),
@@ -237,6 +360,15 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                     data['team_role'], teamRoleItem, data['team_role_years'], false),
                                 _buildSkillRow(Icons.code, "言語",
                                     data['code_languages'], codeLanguagesItem, data['code_languages_years'], false),
+                      Theme(
+                      data: Theme.of(context).copyWith(dividerColor: Colors.black12),
+                      child: ExpansionTile(
+                      tilePadding: EdgeInsets.zero,
+
+                      title: const Text('その他のスキル情報',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.black)),
+                      childrenPadding: EdgeInsets.zero,
+                      children: [
                                 _buildSkillRow(Icons.storage, "DB",
                                     data['db_experience'], dbExperienceItem, data['db_experience_years'], false),
                                 _buildSkillRow(Icons.memory_rounded, "OS",
@@ -245,6 +377,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                     data['cloud_technology'], cloudTechnologyItem, data['cloud_technology_years'], false),
                                 _buildSkillRow(Icons.build_circle_outlined, "TOOL",
                                     data['tool'], toolItem, data['tool_years'], true),
+                                    ],
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -261,11 +396,10 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         label:
             const Text('検索条件変更', style: TextStyle(fontWeight: FontWeight.bold)),
         icon: const Icon(Icons.tune),
-        backgroundColor: Colors.orangeAccent,
+        backgroundColor: Colors.lightGreen.shade100,
       ),
     );
   }
-
 
 // =============================================
 // ③ _buildSkillRow を完全置き換え
@@ -309,7 +443,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           const SizedBox(height: 8),
           // チップ行
           chips.isEmpty
-              ? Text('未登録',
+              ? Text('登録情報がありません。',
               style: TextStyle(fontSize: 12, color: Colors.grey.shade600))
               : Wrap(spacing: 0, runSpacing: 6, children: chips),
         ],
@@ -328,26 +462,36 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       return _YearTheme(
           dot: const Color(0xFFFFAA00),
           border: const Color(0xFFFFAA00),
-          label: yearIdx == 5 ? '10年以上' : '5〜10年');
+          // label: yearIdx == 5 ? '10年以上' : '5〜10年'
+          label: ''
+      );
     if (yearIdx >= 3)
       return _YearTheme(
           dot: const Color(0xFF4CAF50),
           border: const Color(0xFF4CAF50),
-          label: '3〜5年');
+          // label: '3〜5年'
+          label: ''
+      );
     if (yearIdx >= 2)
       return _YearTheme(
           dot: const Color(0xFF4CAF50),
           border: const Color(0xFF4CAF50),
-          label: '2〜3年');
+          label: ''
+          // label: '2〜3年'
+      );
     if (yearIdx >= 1)
       return _YearTheme(
           dot: const Color(0xFF2196F3),
           border: const Color(0xFF2196F3),
-          label: '1〜2年');
+          // label: '1〜2年'
+          label: ''
+      );
     return _YearTheme(
         dot: const Color(0xFF9E9E9E),
         border: const Color(0xFF616161),
-        label: '1年未満');
+        // label: '1年未満'
+        label: ''
+    );
   }
 
 // processLevelList index → ランク色テーマ
@@ -401,7 +545,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           Text(name,
               style: const TextStyle(
                   fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black//Colors.white
-               )),
+              )),
           const SizedBox(width: 6),
           Text(t.label,
               style: TextStyle(fontSize: 11, color: Colors.black)),
@@ -428,7 +572,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            t.isDash ? Icons.remove : Icons.check,
+            t.isDash ? Icons.camera : Icons.camera,
+            // Icons.remove : Icons.check,
             size: 12,
             color: t.dot,
           ),
@@ -459,20 +604,20 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         ),
       ),
     );
-   }
+  }
 
   Future<List<DocumentSnapshot>> getStream() async {
     searchConditions = ref.watch(searchConditionsControllerProvider);
     Query query =
-        engineer.where(FieldPath.documentId, isNotEqualTo: "sequenceNo");
+    engineer.where(FieldPath.documentId, isNotEqualTo: "sequenceNo");
 
     if (searchConditions.getSearchSettingFlag == true) {
       if (searchConditions.getAgeDropdownSelectedValue! > 0) {
         int searchNum = (searchConditions.getAgeDropdownSelectedValue == 1)
             ? 30
             : (searchConditions.getAgeDropdownSelectedValue == 2)
-                ? 40
-                : 50;
+            ? 40
+            : 50;
         query = query.where("age", isLessThanOrEqualTo: searchNum);
       }
     }
@@ -506,7 +651,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             userItems: data["code_languages"] ?? [],
             userYears: data["code_languages_years"] ?? [],
             searchSettings:
-                searchConditions.getCodeLanguagesSearchItemChecked!);
+            searchConditions.getCodeLanguagesSearchItemChecked!);
       }
 
       bool dbExperienceMatch = true;
@@ -553,8 +698,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
   bool _checkExperience(
       {required List<dynamic> userItems,
-      required List<dynamic> userYears,
-      required List<List<bool>> searchSettings}) {
+        required List<dynamic> userYears,
+        required List<List<bool>> searchSettings}) {
     bool hasAnyCondition = false;
     for (var setting in searchSettings) {
       if (setting.contains(true)) {
