@@ -21,6 +21,12 @@ class _EngineerSeachDetailPageState extends State<EngineerSeachDetailPage> {
   // masters を constData から取得するように変更
   final Map<String, List<String>> masters = constData.engineerMasters;
 
+  // 削除機能フラグ　削除機能　TRUE：可能、FALSE：不能
+  static const bool _canDeleteEngineer = true;
+
+  // 編集機能フラグ　編集更新機能　TRUE：可能、FALSE：不能
+  static const bool _canEditEngineer = false;
+
   @override
   void initState() {
     super.initState();
@@ -68,6 +74,7 @@ class _EngineerSeachDetailPageState extends State<EngineerSeachDetailPage> {
         ),
         actions: [
           // 削除アイコン
+          if(_canDeleteEngineer)
           IconButton(
             icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
             onPressed: () async {
@@ -82,7 +89,7 @@ class _EngineerSeachDetailPageState extends State<EngineerSeachDetailPage> {
               );
 
               // 削除が成功（true）した場合は、前の画面（一覧画面）へ戻る
-              if (deleted && mounted) {
+              if (_canDeleteEngineer && deleted && mounted) {
                 Navigator.pop(context, true);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('削除が完了しました')),
@@ -91,6 +98,7 @@ class _EngineerSeachDetailPageState extends State<EngineerSeachDetailPage> {
             },
           ),
           // 編集アイコン
+          if(_canEditEngineer)
           IconButton(
             icon: const Icon(Icons.edit_outlined, color: constData.themeGreen),
             onPressed: () async {
