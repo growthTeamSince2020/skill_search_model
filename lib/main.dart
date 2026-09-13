@@ -10,11 +10,12 @@ import 'accountManagementScreen.dart';
 import 'permissionSettingsScreen.dart';
 import 'common/firebaseOptions.dart';
 import 'common/constData.dart';
+import 'common/app_theme.dart'; // ★ インポートを追加
 import 'loginScreen.dart';
 import 'menuScreen.dart';
 import 'companySetupScreen.dart';
 import 'staffSetupScreen.dart';
-import 'forgotPasswordScreen.dart'; // ★ 追加
+import 'forgotPasswordScreen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,7 +58,6 @@ class AppUser {
         ? Map<String, dynamic>.from(data['permissions'])
         : {'canEdit': false, 'canExport': false};
 
-    // ★ ロールが未設定（null/空）の場合は 'member' (一般ユーザー) をデフォルトにする
     String role = data['role'] ?? constData.roleMember;
     if (role.isEmpty) role = constData.roleMember;
 
@@ -97,12 +97,10 @@ class MyApp extends ConsumerWidget {
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: constData.themeGreen, // テーマカラーを統一
-        brightness: Brightness.light,
-        fontFamily: 'sans-serif',
-      ),
+      title: constData.systemName, // ★ 定数(Skirun)を使用
+
+      // ★ 一括管理テーマを適用（個別のThemeData指定を削除）
+      theme: AppTheme.lightTheme,
 
       // 動的ルーティングの設定
       onGenerateRoute: (settings) {
@@ -120,7 +118,7 @@ class MyApp extends ConsumerWidget {
           return MaterialPageRoute(builder: (context) => const PermissionSettingsScreen());
         }
 
-        // 3. パスワード再設定画面 ★ 追加
+        // 3. パスワード再設定画面
         if (path == '/forgot_password') {
           return MaterialPageRoute(builder: (context) => const ForgotPasswordScreen());
         }

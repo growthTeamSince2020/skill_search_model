@@ -2,10 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart'; // クリップボード用
 import 'package:skill_search_model/utils/uiUtils.dart';
-import 'dart:math';
-
 import 'package:url_launcher/url_launcher.dart';
-
 import 'common/constData.dart';
 
 class AdminInvitationScreen extends StatefulWidget {
@@ -25,13 +22,11 @@ class _AdminInvitationScreenState extends State<AdminInvitationScreen> {
 
   bool _isSending = false;
   String? _generatedUrl;
-  String? _generatedSubject; // 生成された件名
-  String? _generatedBody;    // 生成された本文
-  String? _lastCompanyCode;  // 企業コード保持用
+  String? _generatedSubject;
+  String? _generatedBody;
+  String? _lastCompanyCode;
 
-  static const themeGreen = Color(0xFF2E7D32);
-
-  // 企業コード生成 (CP + YYMM + 3桁連番)
+  // 企業コード生成ロジック (仕様維持)
   Future<String> _generateCompanyCode() async {
     final now = DateTime.now();
     final year = now.year.toString().substring(2);
@@ -54,6 +49,7 @@ class _AdminInvitationScreenState extends State<AdminInvitationScreen> {
     }
   }
 
+  // 招待発行・メールURL生成
   Future<void> _sendInvitation() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -81,10 +77,10 @@ class _AdminInvitationScreenState extends State<AdminInvitationScreen> {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      // 2. 定型文の作成
-      final subject = '【重要】スキル検索システム 初回登録のご案内';
+      // 2. 定型文の作成 (システム名定数を使用) ★修正箇所
+      final subject = '【重要】${constData.systemName} 初回登録のご案内';
       final body = '${_managerNameController.text} 様\n\n'
-          'お世話になっております。システム管理者です。\n'
+          'お世話になっております。${constData.systemName} システム管理者です。\n'
           '${_companyNameController.text} 様のシステム利用開始に伴い、初回登録URLを発行いたしました。\n\n'
           '以下のURLより、24時間以内に企業情報の登録および管理者パスワードの設定を完了させてください。\n\n'
           '■初回登録URL\n'
@@ -104,19 +100,17 @@ class _AdminInvitationScreenState extends State<AdminInvitationScreen> {
         _lastCompanyCode = companyCode;
       });
 
-      // 3. Gmailをブラウザで自動起動 (Chrome対応)
+      // 3. ブラウザでGmail/Mailto起動
       final String toEmail = _emailController.text;
       final String encodedSubject = Uri.encodeComponent(subject);
       final String encodedBody = Uri.encodeComponent(body);
 
-      // Gmail新規作成URL
       final String gmailUrl = 'https://mail.google.com/mail/?view=cm&fs=1&to=$toEmail&su=$encodedSubject&body=$encodedBody';
       final Uri gmailUri = Uri.parse(gmailUrl);
 
       if (await canLaunchUrl(gmailUri)) {
         await launchUrl(gmailUri, mode: LaunchMode.externalApplication);
       } else {
-        // フォールバック
         final Uri mailtoUri = Uri.parse('mailto:$toEmail?subject=$encodedSubject&body=$encodedBody');
         if (await canLaunchUrl(mailtoUri)) {
           await launchUrl(mailtoUri);
@@ -140,31 +134,53 @@ class _AdminInvitationScreenState extends State<AdminInvitationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFB),
       appBar: AppBar(
-        title: const Text('企業初回登録案内・管理', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black87),
+        title: Row(
+          children: [
+            const Icon(Icons.send_rounded, color: constData.themeGreen, size: 24),
+            const SizedBox(width: 12),
+            Text(
+              '企業初回登録案内',
+              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1.0),
+          child: Container(color: Colors.grey.withOpacity(0.15), height: 1.0),
+        ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(constData.cardPadding),
         child: Center(
           child: Container(
             constraints: const BoxConstraints(maxWidth: 800),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('新規企業招待の発行', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(
+                    '新規企業招待の発行',
+                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)
+                ),
                 const SizedBox(height: 16),
                 _buildInputForm(),
-                // URL発行後のみ表示されるエリア
+
                 if (_generatedUrl != null) ...[
-                  const SizedBox(height: 32),
-                  const Text('発行済み案内メール定型文', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 40),
+                  Text(
+                      '発行済み案内メール定型文',
+                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)
+                  ),
                   const SizedBox(height: 16),
-                  _buildMailTemplateCard(),
+                  _buildMailTemplateCard(theme),
                 ],
               ],
             ),
@@ -201,9 +217,9 @@ class _AdminInvitationScreenState extends State<AdminInvitationScreen> {
               icon: Icons.mail_outline,
               isEmail: true,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
             _isSending
-                ? const CircularProgressIndicator(color: themeGreen)
+                ? const CircularProgressIndicator(color: constData.themeGreen)
                 : UIUtils.buildPrimaryButton(
               label: '案内情報を登録・URL発行',
               onPressed: _sendInvitation,
@@ -214,12 +230,8 @@ class _AdminInvitationScreenState extends State<AdminInvitationScreen> {
     );
   }
 
-  // メール件名と本文をコピーするためのカード
-  Widget _buildMailTemplateCard() {
-    // build時にnullチェックを行うことでTypeErrorを回避
-    if (_generatedSubject == null || _generatedBody == null) {
-      return const SizedBox.shrink();
-    }
+  Widget _buildMailTemplateCard(ThemeData theme) {
+    if (_generatedSubject == null || _generatedBody == null) return const SizedBox.shrink();
 
     return Column(
       children: [
@@ -227,6 +239,7 @@ class _AdminInvitationScreenState extends State<AdminInvitationScreen> {
           label: 'メール件名',
           content: _generatedSubject!,
           icon: Icons.title,
+          theme: theme,
         ),
         const SizedBox(height: 16),
         _buildCopyableField(
@@ -234,6 +247,7 @@ class _AdminInvitationScreenState extends State<AdminInvitationScreen> {
           content: _generatedBody!,
           icon: Icons.subject,
           isLongText: true,
+          theme: theme,
         ),
       ],
     );
@@ -243,13 +257,14 @@ class _AdminInvitationScreenState extends State<AdminInvitationScreen> {
     required String label,
     required String content,
     required IconData icon,
+    required ThemeData theme,
     bool isLongText = false,
   }) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: Colors.grey.shade300),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(constData.borderRadius),
+        border: Border.all(color: Colors.black12),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -261,7 +276,7 @@ class _AdminInvitationScreenState extends State<AdminInvitationScreen> {
               children: [
                 Row(
                   children: [
-                    Icon(icon, size: 18, color: themeGreen),
+                    Icon(icon, size: 18, color: constData.themeGreen),
                     const SizedBox(width: 8),
                     Text(label, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
                   ],
@@ -271,20 +286,20 @@ class _AdminInvitationScreenState extends State<AdminInvitationScreen> {
                     Clipboard.setData(ClipboardData(text: content));
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$labelをコピーしました')));
                   },
-                  icon: const Icon(Icons.copy, size: 16),
+                  icon: const Icon(Icons.copy_rounded, size: 16),
                   label: const Text('コピー'),
-                  style: TextButton.styleFrom(foregroundColor: themeGreen),
+                  style: TextButton.styleFrom(foregroundColor: constData.themeGreen),
                 ),
               ],
             ),
             const Divider(),
-            const SizedBox(height: 4),
+            const SizedBox(height: 8),
             SelectableText(
               content,
               style: TextStyle(
                 fontSize: 13,
                 color: Colors.blueGrey.shade800,
-                height: 1.5,
+                height: 1.6,
                 fontFamily: isLongText ? 'monospace' : null,
               ),
             ),
@@ -311,9 +326,6 @@ class _AdminInvitationScreenState extends State<AdminInvitationScreen> {
           decoration: InputDecoration(
             prefixIcon: Icon(icon, size: 20),
             hintText: hint,
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
           ),
           validator: (value) {
             if (value == null || value.isEmpty) return '必須入力です';
