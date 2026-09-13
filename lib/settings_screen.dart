@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // クリップボード用
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:skill_search_model/utils/uiUtils.dart'; // ★ 追加
 import '../common/constData.dart';
 import '../utils/objectsUtils.dart';
 
@@ -37,87 +38,122 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFB),
       appBar: AppBar(
-        title: const Text('アカウント設定', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         elevation: 0,
+        scrolledUnderElevation: 0,
         iconTheme: const IconThemeData(color: Colors.black87),
+        title: Row(
+          children: [
+            const Icon(Icons.settings_suggest_rounded, color: constData.themeGreen, size: 24),
+            const SizedBox(width: 12),
+            Text(
+              'アカウント設定',
+              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1.0),
+          child: Container(color: Colors.grey.withOpacity(0.15), height: 1.0),
+        ),
       ),
-      backgroundColor: Colors.white,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // --- 1. プロフィール画像 ---
-              Center(child: _buildAvatarSection()),
-              const SizedBox(height: 32),
+        padding: const EdgeInsets.all(constData.cardPadding),
+        child: Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // --- 1. プロフィール画像 ---
+                  Center(child: _buildAvatarSection()),
+                  const SizedBox(height: 32),
 
-              // --- 2. UID (表示のみ・コピー可能) ---
-              _buildReadOnlyField(
-                label: 'ユーザーID (UID)',
-                value: user?.uid ?? '不明',
-                icon: Icons.vpn_key_outlined,
-              ),
-              const SizedBox(height: 20),
-
-              // --- 3. 氏名 / 表示名 ---
-              _buildManagedTextField(
-                label: '氏名 / 表示名',
-                controller: _nameController,
-                icon: Icons.badge_outlined,
-                hint: '検索結果に表示される名前',
-              ),
-              const SizedBox(height: 20),
-
-              // --- 4. 所属 / 役職 ---
-              _buildManagedTextField(
-                label: '所属 / 役職',
-                controller: _affiliationController,
-                icon: Icons.corporate_fare_outlined,
-                hint: '例：開発部 第1チーム',
-              ),
-              const SizedBox(height: 20),
-
-              // --- 5. 連絡用メールアドレス ---
-              _buildManagedTextField(
-                label: '連絡用メールアドレス',
-                controller: _emailController,
-                icon: Icons.email_outlined,
-                hint: 'example@mail.com',
-                keyboardType: TextInputType.emailAddress,
-              ),
-
-              const SizedBox(height: 40),
-
-              // --- 保存ボタン ---
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton(
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('設定を保存しました')),
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green[700],
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  // --- 2. UIDエリア ---
+                  _buildReadOnlyField(
+                    label: 'ユーザーID (UID)',
+                    value: user?.uid ?? '不明',
+                    icon: Icons.vpn_key_outlined,
                   ),
-                  child: const Text('設定を保存する', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                ),
-              ),
+                  const SizedBox(height: 24),
 
-              const SizedBox(height: 60),
-              Center(
-                child: Text('Version ${constData.systemVersion}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                  // --- 3. プロフィール編集エリア ---
+                  UIUtils.buildFormSection(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('プロフィール情報',
+                            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                        const Divider(height: 32),
+
+                        _buildManagedTextField(
+                          label: '氏名 / 表示名',
+                          controller: _nameController,
+                          icon: Icons.badge_outlined,
+                          hint: '検索結果に表示される名前',
+                        ),
+                        const SizedBox(height: 20),
+
+                        _buildManagedTextField(
+                          label: '所属 / 役職',
+                          controller: _affiliationController,
+                          icon: Icons.corporate_fare_outlined,
+                          hint: '例：開発部 第1チーム',
+                        ),
+                        const SizedBox(height: 20),
+
+                        _buildManagedTextField(
+                          label: '連絡用メールアドレス',
+                          controller: _emailController,
+                          icon: Icons.email_outlined,
+                          hint: 'example@mail.com',
+                          keyboardType: TextInputType.emailAddress,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 40),
+
+                  // --- 保存ボタン ---
+                  UIUtils.buildPrimaryButton(
+                    label: '設定を保存する',
+                    onPressed: () {
+                      if (_formKey.currentState!.validate()) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('設定を保存しました')),
+                        );
+                      }
+                    },
+                  ),
+
+                  const SizedBox(height: 40),
+                  Center(
+                    child: Column(
+                      children: [
+                        Text(
+                          'Skirun System Management',
+                          style: TextStyle(color: Colors.grey[400], fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Version ${constData.systemVersion}',
+                          style: TextStyle(color: Colors.grey[400], fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 60),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -129,33 +165,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black54)),
-        const SizedBox(height: 8),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black54)),
+        ),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Colors.grey[300]!),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(constData.borderRadius),
+            border: Border.all(color: Colors.black12),
           ),
-          child: ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(icon, color: Colors.grey[600]),
-            title: Text(value, style: TextStyle(color: Colors.grey[700], fontSize: 13, fontFamily: 'monospace')),
-            trailing: IconButton(
-              icon: const Icon(Icons.copy, size: 20),
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: value));
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('UIDをコピーしました')));
-              },
-            ),
+          child: Row(
+            children: [
+              Icon(icon, color: Colors.black38, size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  value,
+                  style: const TextStyle(color: Colors.black54, fontSize: 13, fontFamily: 'monospace'),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.copy_rounded, size: 20, color: constData.themeGreen),
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: value));
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('UIDをコピーしました')));
+                },
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  /// ObjectUtils.validateField を活用した共通入力フィールド
+  /// 入力フィールド
   Widget _buildManagedTextField({
     required String label,
     required TextEditingController controller,
@@ -166,26 +212,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black54)),
+        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
           validator: (value) => ObjectUtils.validateField(value ?? '', label),
           decoration: InputDecoration(
-            prefixIcon: Icon(icon, color: Colors.green[700]),
+            prefixIcon: Icon(icon, size: 20),
             hintText: hint,
-            filled: true,
-            fillColor: Colors.grey[50],
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(15),
-              borderSide: BorderSide(color: Colors.grey[200]!),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(15),
-              borderSide: const BorderSide(color: Color(0xFF2E7D32), width: 2),
-            ),
           ),
         ),
       ],
@@ -195,20 +230,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildAvatarSection() {
     return Stack(
       children: [
-        CircleAvatar(
-          radius: 60,
-          backgroundColor: Colors.grey[200],
-          backgroundImage: user?.photoURL != null ? NetworkImage(user!.photoURL!) : null,
-          child: user?.photoURL == null ? const Icon(Icons.person, size: 60, color: Colors.grey) : null,
+        Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 4),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4)),
+            ],
+          ),
+          child: CircleAvatar(
+            radius: 60,
+            backgroundColor: Colors.grey[200],
+            backgroundImage: user?.photoURL != null ? NetworkImage(user!.photoURL!) : null,
+            child: user?.photoURL == null ? const Icon(Icons.person, size: 60, color: Colors.white) : null,
+          ),
         ),
         Positioned(
           bottom: 0,
           right: 0,
-          child: CircleAvatar(
-            backgroundColor: const Color(0xFF2E7D32),
-            radius: 20,
+          child: Container(
+            decoration: const BoxDecoration(
+              color: constData.themeGreen,
+              shape: BoxShape.circle,
+            ),
             child: IconButton(
-              icon: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+              icon: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 20),
               onPressed: () {},
             ),
           ),

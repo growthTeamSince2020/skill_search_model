@@ -38,13 +38,13 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
 
   Timer? _debounce;
 
-  static const double colWidthName = 220.0;
+  static const double colWidthName = 240.0; // 少し広めに調整
   static const double colWidthRole = 160.0;
   static const double colWidthCompany = 120.0;
   static const double colWidthDate = 160.0;
   static const double colWidthUid = 200.0;
   static const double colWidthAction = 80.0;
-  static const double rowHeight = 60.0;
+  static const double rowHeight = 64.0; // 高さを少しゆったりさせる
 
   @override
   void initState() {
@@ -74,21 +74,17 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
 
   void _onSearchChanged(String key) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
-
     _debounce = Timer(const Duration(milliseconds: 500), () {
       if (!mounted) return;
-
       final controller = _filterControllers[key];
-      if (controller != null && controller.value.composing.isValid) {
-        return;
-      }
-
+      if (controller != null && controller.value.composing.isValid) return;
       setState(() {});
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final String currentUid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return FutureBuilder<DocumentSnapshot>(
@@ -104,18 +100,33 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
         }
 
         return Scaffold(
+          backgroundColor: theme.scaffoldBackgroundColor,
           appBar: AppBar(
-            title: const Text('アカウント管理', style: TextStyle(fontWeight: FontWeight.bold)),
+            backgroundColor: Colors.white,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            title: Row(
+              children: [
+                const Icon(Icons.manage_accounts_rounded, color: constData.themeGreen, size: 24),
+                const SizedBox(width: 12),
+                Text('アカウント管理', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+              ],
+            ),
             actions: [
               if (_selectedUids.isNotEmpty)
-                TextButton.icon(
-                  onPressed: () => _showBulkDeleteConfirm(context),
-                  icon: const Icon(Icons.delete_sweep, color: Colors.red),
-                  label: Text('一括削除 (${_selectedUids.length})', style: const TextStyle(color: Colors.red)),
+                Padding(
+                  padding: const EdgeInsets.only(right: 16),
+                  child: TextButton.icon(
+                    onPressed: () => _showBulkDeleteConfirm(context),
+                    icon: const Icon(Icons.delete_sweep, color: Colors.redAccent),
+                    label: Text('一括削除 (${_selectedUids.length})', style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                  ),
                 ),
-              // 「ユーザー追加」ボタンを削除しました（招待画面へ統合済みのため）
-              const SizedBox(width: 16),
             ],
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(1.0),
+              child: Container(color: Colors.grey.withOpacity(0.2), height: 1.0),
+            ),
           ),
           body: StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance.collection('users').orderBy('registrationDate', descending: true).snapshots(),
@@ -145,11 +156,12 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
 
               return Column(
                 children: [
-                  _buildStickyHeader(),
+                  _buildStickyHeader(theme),
                   Expanded(
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // 左側固定列（氏名・メール）
                         SizedBox(
                           width: colWidthName,
                           child: ScrollConfiguration(
@@ -161,6 +173,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                             ),
                           ),
                         ),
+                        // 右側スクロール列
                         Expanded(
                           child: Scrollbar(
                             controller: _horizontalController,
@@ -175,7 +188,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                                   child: ListView.builder(
                                     controller: _verticalControllerRight,
                                     itemCount: filteredUsers.length,
-                                    itemBuilder: (context, index) => _buildScrollableRow(context, filteredUsers[index], myRole),
+                                    itemBuilder: (context, index) => _buildScrollableRow(context, filteredUsers[index], myRole, theme),
                                   ),
                                 ),
                               ),
@@ -194,9 +207,9 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
     );
   }
 
-  Widget _buildStickyHeader() {
+  Widget _buildStickyHeader(ThemeData theme) {
     return Container(
-      color: Colors.grey[100],
+      color: Colors.grey[50], // より白に近いグレーに
       child: Column(
         children: [
           Row(
@@ -220,7 +233,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
               ),
             ],
           ),
-          const Divider(height: 1, thickness: 2, color: Colors.black26),
+          const Divider(height: 1, thickness: 1, color: Colors.black12),
           Row(
             children: [
               _headerLabelCell(colWidthName, '氏名 / メールアドレス'),
@@ -242,7 +255,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
               ),
             ],
           ),
-          const Divider(height: 1, thickness: 1, color: Colors.grey),
+          const Divider(height: 1, thickness: 1, color: Colors.black12),
         ],
       ),
     );
@@ -251,42 +264,37 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
   Widget _headerSearchCell(double width, String hint, String key) {
     return Container(
       width: width,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      child: Focus(
-        onKeyEvent: (node, event) {
-          if (event.logicalKey == LogicalKeyboardKey.backspace || event.logicalKey == LogicalKeyboardKey.delete) {
-            return KeyEventResult.ignored;
-          }
-          return KeyEventResult.ignored;
-        },
-        child: TextField(
-          key: ValueKey('search_field_$key'),
-          controller: _filterControllers[key],
-          focusNode: _filterFocusNodes[key],
-          style: const TextStyle(fontSize: 12),
-          autocorrect: false,
-          enableSuggestions: false,
-          enableInteractiveSelection: true,
-          decoration: InputDecoration(
-            hintText: '$hint 検索',
-            isDense: true,
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            prefixIcon: const Icon(Icons.search, size: 14),
-            suffixIcon: _filterControllers[key]!.text.isNotEmpty
-                ? IconButton(
-              icon: const Icon(Icons.clear, size: 14),
-              onPressed: () {
-                _filterControllers[key]!.clear();
-                _filterFocusNodes[key]!.requestFocus();
-                setState(() {});
-              },
-            )
-                : null,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: TextField(
+        controller: _filterControllers[key],
+        focusNode: _filterFocusNodes[key],
+        style: const TextStyle(fontSize: 12),
+        decoration: InputDecoration(
+          hintText: '$hint 検索',
+          isDense: true,
+          filled: true,
+          fillColor: Colors.white,
+          prefixIcon: const Icon(Icons.search, size: 14, color: Colors.grey),
+          contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(constData.borderRadius),
+            borderSide: const BorderSide(color: Colors.black12),
           ),
-          onChanged: (v) => _onSearchChanged(key),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(constData.borderRadius),
+            borderSide: const BorderSide(color: constData.themeGreen),
+          ),
+          suffixIcon: _filterControllers[key]!.text.isNotEmpty
+              ? IconButton(
+            icon: const Icon(Icons.clear, size: 14),
+            onPressed: () {
+              _filterControllers[key]!.clear();
+              setState(() {});
+            },
+          )
+              : null,
         ),
+        onChanged: (v) => _onSearchChanged(key),
       ),
     );
   }
@@ -294,10 +302,10 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
   Widget _headerLabelCell(double width, String label) {
     return Container(
       width: width,
-      height: 40,
+      height: 44,
       alignment: Alignment.centerLeft,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87)),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black54)),
     );
   }
 
@@ -307,29 +315,33 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
     return Container(
       height: rowHeight,
       decoration: BoxDecoration(
-        color: isSelected ? Colors.green.withOpacity(0.05) : Colors.white,
-        border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+        color: isSelected ? constData.themeGreen.withOpacity(0.05) : Colors.white,
+        border: Border(bottom: BorderSide(color: Colors.grey[100]!)),
       ),
       child: Row(
         children: [
           Checkbox(
             value: isSelected,
-            onChanged: (val) => setState(() => val! ? _selectedUids.add(doc.id) : _selectedUids.remove(doc.id)),
             activeColor: constData.themeGreen,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+            onChanged: (val) => setState(() => val! ? _selectedUids.add(doc.id) : _selectedUids.remove(doc.id)),
           ),
           CircleAvatar(
-              radius: 14,
-              backgroundImage: (data['photoURL'] != null && data['photoURL'] != "") ? NetworkImage(data['photoURL']) : null,
-              child: (data['photoURL'] == null || data['photoURL'] == "") ? const Icon(Icons.person, size: 14) : null
+            radius: 16,
+            backgroundColor: constData.themeGreen.withOpacity(0.1),
+            backgroundImage: (data['photoURL'] != null && data['photoURL'] != "") ? NetworkImage(data['photoURL']) : null,
+            child: (data['photoURL'] == null || data['photoURL'] == "")
+                ? const Icon(Icons.person, size: 16, color: constData.themeGreen)
+                : null,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(data['displayName'] ?? '未設定', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), overflow: TextOverflow.ellipsis),
-                Text(data['email'] ?? '', style: const TextStyle(fontSize: 11, color: Colors.grey), overflow: TextOverflow.ellipsis),
+                Text(data['displayName'] ?? '未設定', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87), overflow: TextOverflow.ellipsis),
+                Text(data['email'] ?? '', style: const TextStyle(fontSize: 11, color: Colors.black45), overflow: TextOverflow.ellipsis),
               ],
             ),
           ),
@@ -338,7 +350,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
     );
   }
 
-  Widget _buildScrollableRow(BuildContext context, QueryDocumentSnapshot doc, String myRole) {
+  Widget _buildScrollableRow(BuildContext context, QueryDocumentSnapshot doc, String myRole, ThemeData theme) {
     final data = doc.data() as Map<String, dynamic>;
     final bool isSelected = _selectedUids.contains(doc.id);
     final String currentRole = data['role'] ?? constData.roleMember;
@@ -348,29 +360,38 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
     return Container(
       height: rowHeight,
       decoration: BoxDecoration(
-        color: isSelected ? Colors.green.withOpacity(0.05) : Colors.white,
-        border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+        color: isSelected ? constData.themeGreen.withOpacity(0.05) : Colors.white,
+        border: Border(bottom: BorderSide(color: Colors.grey[100]!)),
       ),
       child: Row(
         children: [
           Container(
             width: colWidthRole,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: DropdownButton<String>(
-              value: availableRoles.contains(currentRole) ? currentRole : null,
-              isExpanded: true,
-              items: availableRoles.map((r) => DropdownMenuItem(value: r, child: Text(UIUtils.getRoleDisplayName(r), style: const TextStyle(fontSize: 12)))).toList(),
-              onChanged: (val) => _updateUserField(context, doc.id, 'role', val),
-              underline: const SizedBox(),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(constData.borderRadius),
+                border: Border.all(color: Colors.black12),
+              ),
+              child: DropdownButton<String>(
+                value: availableRoles.contains(currentRole) ? currentRole : null,
+                isExpanded: true,
+                items: availableRoles.map((r) => DropdownMenuItem(value: r, child: Text(UIUtils.getRoleDisplayName(r), style: const TextStyle(fontSize: 12)))).toList(),
+                onChanged: (val) => _updateUserField(context, doc.id, 'role', val),
+                underline: const SizedBox(),
+                icon: const Icon(Icons.arrow_drop_down, size: 18),
+              ),
             ),
           ),
-          Container(width: colWidthCompany, padding: const EdgeInsets.symmetric(horizontal: 12), child: Text(data['companyCode'] ?? '-', style: const TextStyle(fontSize: 12))),
-          Container(width: colWidthDate, padding: const EdgeInsets.symmetric(horizontal: 12), child: Text(data['registrationDate'] is Timestamp ? DateFormat('yyyy/MM/dd HH:mm').format((data['registrationDate'] as Timestamp).toDate()) : '-', style: const TextStyle(fontSize: 12))),
-          Container(width: colWidthUid, padding: const EdgeInsets.symmetric(horizontal: 12), child: SelectableText(doc.id, style: const TextStyle(fontSize: 10, color: Colors.grey, fontFamily: 'monospace'))),
+          Container(width: colWidthCompany, padding: const EdgeInsets.symmetric(horizontal: 16), child: Text(data['companyCode'] ?? '-', style: const TextStyle(fontSize: 12))),
+          Container(width: colWidthDate, padding: const EdgeInsets.symmetric(horizontal: 16), child: Text(data['registrationDate'] is Timestamp ? DateFormat('yyyy/MM/dd HH:mm').format((data['registrationDate'] as Timestamp).toDate()) : '-', style: const TextStyle(fontSize: 12))),
+          Container(width: colWidthUid, padding: const EdgeInsets.symmetric(horizontal: 16), child: SelectableText(doc.id, style: const TextStyle(fontSize: 10, color: Colors.black38, fontFamily: 'monospace'))),
           SizedBox(
             width: colWidthAction,
             child: IconButton(
-              icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+              icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 22),
               onPressed: () => _showDeleteConfirm(context, doc.id, data['displayName'] ?? '未設定'),
             ),
           ),
@@ -379,6 +400,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
     );
   }
 
+  // 更新・削除ロジック (UIUtils連携により仕様維持)
   Future<void> _updateUserField(BuildContext context, String docId, String field, dynamic value) async {
     try {
       await FirebaseFirestore.instance.collection('users').doc(docId).update({field: value, 'updateDate': FieldValue.serverTimestamp()});
@@ -397,17 +419,21 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(constData.borderRadius)),
         title: const Text('一括削除'),
-        content: Text('${_selectedUids.length} 名のデータを削除しますか？'),
+        content: Text('${_selectedUids.length} 名のデータを削除しますか？\nこの操作は取り消せません。'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('キャンセル')),
-          TextButton(onPressed: () async {
-            final batch = FirebaseFirestore.instance.batch();
-            for (var id in _selectedUids) batch.delete(FirebaseFirestore.instance.collection('users').doc(id));
-            await batch.commit();
-            setState(() => _selectedUids.clear());
-            Navigator.pop(context);
-          }, child: const Text('削除', style: TextStyle(color: Colors.red))),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('キャンセル', style: TextStyle(color: Colors.grey))),
+          TextButton(
+            onPressed: () async {
+              final batch = FirebaseFirestore.instance.batch();
+              for (var id in _selectedUids) batch.delete(FirebaseFirestore.instance.collection('users').doc(id));
+              await batch.commit();
+              setState(() => _selectedUids.clear());
+              if (mounted) Navigator.pop(context);
+            },
+            child: const Text('削除を実行', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+          ),
         ],
       ),
     );

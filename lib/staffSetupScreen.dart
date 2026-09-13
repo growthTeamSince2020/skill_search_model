@@ -1,16 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:skill_search_model/common/constData.dart'; // ★ 追加
+import 'package:skill_search_model/common/constData.dart';
 import 'package:skill_search_model/utils/uiUtils.dart';
 
 /// 自社スタッフ招待の受諾画面
-///
-/// companySetupScreen.dart（新規企業オンボーディング）とは異なり、
-/// - companyCodeは新規発行せず、招待ドキュメント(staffInvitations/{id})に
-///   保存されている既存のcompanyCodeをそのまま引き継ぐ
-/// - roleも招待ドキュメントに保存された値（デフォルトは member）を使う
-///   （'admin'固定ではない）
 class StaffSetupScreen extends StatefulWidget {
   final String invitationId;
 
@@ -36,7 +30,7 @@ class _StaffSetupScreenState extends State<StaffSetupScreen> {
 
   String _companyCode = '';
   String _companyName = '';
-  String _role = constData.roleMember; // ★ engineer -> member (定数化)
+  String _role = constData.roleMember;
 
   @override
   void initState() {
@@ -44,6 +38,7 @@ class _StaffSetupScreenState extends State<StaffSetupScreen> {
     _verifyInvitation();
   }
 
+  // 招待URLの有効性チェック (仕様維持)
   Future<void> _verifyInvitation() async {
     try {
       final doc = await _db.collection('staffInvitations').doc(widget.invitationId).get();
@@ -53,7 +48,6 @@ class _StaffSetupScreenState extends State<StaffSetupScreen> {
       }
       final data = doc.data() as Map<String, dynamic>;
 
-      // 有効期限チェック（招待作成時に設定されている前提）
       if (data['expiryDate'] != null) {
         final expiryDate = (data['expiryDate'] as Timestamp).toDate();
         if (DateTime.now().isAfter(expiryDate)) {
@@ -70,7 +64,7 @@ class _StaffSetupScreenState extends State<StaffSetupScreen> {
       setState(() {
         _companyCode = data['companyCode'] ?? '';
         _companyName = data['companyName'] ?? '';
-        _role = data['role'] ?? constData.roleMember; // ★ engineer -> member (定数化)
+        _role = data['role'] ?? constData.roleMember;
         _nameController.text = data['tempName'] ?? "";
         _emailController.text = data['tempEmail'] ?? "";
         _isLoading = false;
@@ -80,8 +74,6 @@ class _StaffSetupScreenState extends State<StaffSetupScreen> {
     }
   }
 
-  // roleに応じたデフォルト権限
-  // admin相当で招待された場合はcanEdit/canExportをtrueに、それ以外(member)はfalseに。
   Map<String, dynamic> _defaultPermissionsForRole(String role) {
     if (role == constData.roleAdmin || role == constData.roleOwner) {
       return {'canEdit': true, 'canExport': true};
@@ -89,6 +81,7 @@ class _StaffSetupScreenState extends State<StaffSetupScreen> {
     return {'canEdit': false, 'canExport': false};
   }
 
+  // 本登録実行
   Future<void> _completeSetup() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSubmitting = true);
@@ -104,7 +97,7 @@ class _StaffSetupScreenState extends State<StaffSetupScreen> {
       final uid = userCredential.user!.uid;
 
       try {
-        // users ドキュメント作成。companyCode/roleは招待ドキュメントから引き継ぐ
+        // 1. users ドキュメント作成
         await _db.collection('users').doc(uid).set({
           'uid': uid,
           'email': email,
@@ -117,14 +110,14 @@ class _StaffSetupScreenState extends State<StaffSetupScreen> {
           'companyCode': _companyCode,
         });
 
-        // 招待ドキュメントを完了状態に更新
+        // 2. 招待ドキュメント更新
         await _db.collection('staffInvitations').doc(widget.invitationId).update({
           'status': '登録完了',
           'registeredUid': uid,
           'registeredAt': FieldValue.serverTimestamp(),
         });
 
-        // userMappings コレクションの作成
+        // 3. userMappings 作成
         await _db.collection('userMappings').doc(email).set({
           'email': email,
           'companyCode': _companyCode,
@@ -132,7 +125,6 @@ class _StaffSetupScreenState extends State<StaffSetupScreen> {
           'updatedAt': FieldValue.serverTimestamp(),
         });
       } catch (e) {
-        // Firestoreへの書き込みに失敗した場合はAuthユーザーも削除してロールバックを試みる
         try {
           await userCredential.user!.delete();
         } catch (_) {}
@@ -145,21 +137,22 @@ class _StaffSetupScreenState extends State<StaffSetupScreen> {
         context: context,
         barrierDismissible: false,
         builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(constData.borderRadius)),
           title: const Text('登録が完了しました'),
           content: Text('ログインID: $email\nとして登録されました。'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pushReplacementNamed(context, '/'),
-              child: const Text('はじめる'),
+              child: const Text('はじめる', style: TextStyle(fontWeight: FontWeight.bold, color: constData.themeGreen)),
             ),
           ],
         ),
       );
     } on FirebaseAuthException catch (e) {
       String msg = '認証エラー (${e.code}): ${e.message}';
-      UIUtils.showResultDialog(context, title: '認証エラー', message: msg, isError: true);
+      await UIUtils.showResultDialog(context, title: '認証エラー', message: msg, isError: true);
     } catch (e) {
-      UIUtils.showResultDialog(context, title: 'エラー', message: e.toString(), isError: true);
+      await UIUtils.showResultDialog(context, title: 'エラー', message: e.toString(), isError: true);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -167,40 +160,60 @@ class _StaffSetupScreenState extends State<StaffSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFB),
-      appBar: AppBar(title: const Text('アカウント登録'), elevation: 0),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: true,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.person_add_rounded, color: constData.themeGreen, size: 24),
+            const SizedBox(width: 12),
+            Text('スタッフアカウント登録', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(constData.cardPadding),
         child: Center(
           child: Container(
             constraints: const BoxConstraints(maxWidth: 500),
-            child: _errorMessage != null ? _buildErrorView() : _buildSetupForm(),
+            child: _errorMessage != null ? _buildErrorView(theme) : _buildSetupForm(theme),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildErrorView() {
+  Widget _buildErrorView(ThemeData theme) {
     return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(Icons.error_outline, color: Colors.red, size: 60),
-        const SizedBox(height: 16),
-        Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16)),
+        const SizedBox(height: 60),
+        const Icon(Icons.error_outline, color: Colors.redAccent, size: 80),
         const SizedBox(height: 24),
-        ElevatedButton(onPressed: () => Navigator.pushReplacementNamed(context, '/'), child: const Text('ログイン画面へ')),
+        Text(_errorMessage!, textAlign: TextAlign.center, style: theme.textTheme.titleMedium),
+        const SizedBox(height: 32),
+        UIUtils.buildPrimaryButton(
+          label: 'ログイン画面へ戻る',
+          onPressed: () => Navigator.pushReplacementNamed(context, '/'),
+          color: Colors.grey[700] ?? Colors.grey,
+        ),
       ],
     );
   }
 
-  Widget _buildSetupForm() {
+  Widget _buildSetupForm(ThemeData theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('アカウント登録', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+        Text('プロフィールとパスワードの設定', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         Text('所属企業: $_companyName', style: const TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold)),
         const SizedBox(height: 24),
@@ -208,20 +221,21 @@ class _StaffSetupScreenState extends State<StaffSetupScreen> {
           child: Form(
             key: _formKey,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildField('氏名', _nameController, Icons.person, '例：山田 太郎'),
+                _buildField('氏名', _nameController, Icons.person_outline, '例：山田 太郎'),
                 const SizedBox(height: 16),
-                _buildField('メールアドレス', _emailController, Icons.email, 'example@mail.com'),
+                _buildField('メールアドレス', _emailController, Icons.email_outlined, 'example@skirun.jp'),
                 const SizedBox(height: 16),
-                _buildPasswordField('ログインパスワード設定', _passwordController, '8文字以上'),
+                _buildPasswordField('ログインパスワード', _passwordController, '8文字以上'),
                 const SizedBox(height: 16),
                 _buildPasswordField('パスワード再入力', _confirmPasswordController, '確認のためもう一度'),
                 const SizedBox(height: 32),
                 _isSubmitting
-                    ? const CircularProgressIndicator()
-                    : SizedBox(
-                  width: double.infinity,
-                  child: UIUtils.buildPrimaryButton(label: '登録を確定する', onPressed: _completeSetup),
+                    ? const Center(child: CircularProgressIndicator(color: constData.themeGreen))
+                    : UIUtils.buildPrimaryButton(
+                    label: '登録を確定する',
+                    onPressed: _completeSetup
                 ),
               ],
             ),
@@ -235,15 +249,13 @@ class _StaffSetupScreenState extends State<StaffSetupScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
         const SizedBox(height: 8),
         TextFormField(
           controller: ctrl,
           decoration: InputDecoration(
-            prefixIcon: Icon(icon),
+            prefixIcon: Icon(icon, size: 20),
             hintText: hint,
-            border: const OutlineInputBorder(),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
           validator: (v) => (v == null || v.isEmpty) ? '入力してください' : null,
         ),
@@ -255,16 +267,14 @@ class _StaffSetupScreenState extends State<StaffSetupScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
         const SizedBox(height: 8),
         TextFormField(
           controller: ctrl,
           obscureText: true,
           decoration: InputDecoration(
-            prefixIcon: const Icon(Icons.lock),
+            prefixIcon: const Icon(Icons.lock_outline, size: 20),
             hintText: hint,
-            border: const OutlineInputBorder(),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
           validator: (v) {
             if (v == null || v.length < 8) return '8文字以上必要です';
