@@ -18,6 +18,11 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   final CollectionReference engineer =
   FirebaseFirestore.instance.collection('engineer');
   late SearchConditionsDto searchConditions;
+  // ★ Stream化のためのキャッシュ用フィールド
+  // 検索条件が変わっていない限り、同じStreamを使い回すことで
+  // totalCount更新などの無関係な再描画によるFirestore再購読を防ぐ
+  SearchConditionsDto? _cachedConditions;
+  Stream<List<DocumentSnapshot>>? _cachedStream;
 
   // マスターデータ用リスト
   List<String> codeLanguagesItem = [];
@@ -241,11 +246,11 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               onPressed: _lastLoadedDocs.isEmpty ? null : _toggleSelectAll,
             ),
           if (_canDeleteEngineer)
-          IconButton(
-            icon: Icon(_selectionModeEnabled ? Icons.close : Icons.checklist),
-            tooltip: _selectionModeEnabled ? '選択モードを終了' : '選択モード',
-            onPressed: _toggleSelectionMode,
-          ),
+            IconButton(
+              icon: Icon(_selectionModeEnabled ? Icons.close : Icons.checklist),
+              tooltip: _selectionModeEnabled ? '選択モードを終了' : '選択モード',
+              onPressed: _toggleSelectionMode,
+            ),
           if(_canDeleteEngineer && _selectionModeEnabled)
             IconButton(
               icon: const Icon(Icons.delete_outline),
@@ -255,8 +260,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             ),
         ],
       ),
-      body: FutureBuilder<List<DocumentSnapshot>>(
-          future: getStream(),
+      body: StreamBuilder<List<DocumentSnapshot>>(
+          stream: getStream(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -360,23 +365,23 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                     data['team_role'], teamRoleItem, data['team_role_years'], false),
                                 _buildSkillRow(Icons.code, "言語",
                                     data['code_languages'], codeLanguagesItem, data['code_languages_years'], false),
-                      Theme(
-                      data: Theme.of(context).copyWith(dividerColor: Colors.black12),
-                      child: ExpansionTile(
-                      tilePadding: EdgeInsets.zero,
+                                Theme(
+                                  data: Theme.of(context).copyWith(dividerColor: Colors.black12),
+                                  child: ExpansionTile(
+                                    tilePadding: EdgeInsets.zero,
 
-                      title: const Text('その他のスキル情報',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.black)),
-                      childrenPadding: EdgeInsets.zero,
-                      children: [
-                                _buildSkillRow(Icons.storage, "DB",
-                                    data['db_experience'], dbExperienceItem, data['db_experience_years'], false),
-                                _buildSkillRow(Icons.memory_rounded, "OS",
-                                    data['os_experience'], osExperienceItem, data['os_experience_years'], false),
-                                _buildSkillRow(Icons.cloud_queue_rounded, "CLOUD",
-                                    data['cloud_technology'], cloudTechnologyItem, data['cloud_technology_years'], false),
-                                _buildSkillRow(Icons.build_circle_outlined, "TOOL",
-                                    data['tool'], toolItem, data['tool_years'], true),
+                                    title: const Text('その他のスキル情報',
+                                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.black)),
+                                    childrenPadding: EdgeInsets.zero,
+                                    children: [
+                                      _buildSkillRow(Icons.storage, "DB",
+                                          data['db_experience'], dbExperienceItem, data['db_experience_years'], false),
+                                      _buildSkillRow(Icons.memory_rounded, "OS",
+                                          data['os_experience'], osExperienceItem, data['os_experience_years'], false),
+                                      _buildSkillRow(Icons.cloud_queue_rounded, "CLOUD",
+                                          data['cloud_technology'], cloudTechnologyItem, data['cloud_technology_years'], false),
+                                      _buildSkillRow(Icons.build_circle_outlined, "TOOL",
+                                          data['tool'], toolItem, data['tool_years'], true),
                                     ],
                                   ),
                                 ),
@@ -394,7 +399,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _detailSearchScreen,
         label:
-            const Text('検索条件変更', style: TextStyle(fontWeight: FontWeight.bold)),
+        const Text('検索条件変更', style: TextStyle(fontWeight: FontWeight.bold)),
         icon: const Icon(Icons.tune),
         backgroundColor: Colors.lightGreen.shade100,
       ),
@@ -477,7 +482,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           dot: const Color(0xFF4CAF50),
           border: const Color(0xFF4CAF50),
           label: ''
-          // label: '2〜3年'
+        // label: '2〜3年'
       );
     if (yearIdx >= 1)
       return _YearTheme(
@@ -605,9 +610,19 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       ),
     );
   }
-
-  Future<List<DocumentSnapshot>> getStream() async {
+  Stream<List<DocumentSnapshot>> getStream() {
     searchConditions = ref.watch(searchConditionsControllerProvider);
+
+    // 検索条件のインスタンスが変わっていなければ、既存のStreamを再利用する
+    if (_cachedStream != null &&
+        //全く同じメモリ上のインスタンス（同一のオブジェクト）」 であるかを判定、同一なら真
+        identical(_cachedConditions, searchConditions)) {
+      //!はNon-nullableと明示するために使う。！を入れないとNull可能性でコンパイルエラーになる
+      return _cachedStream!;
+    }
+    //条件が新しい（前の条件と同一でない）場合、キャッシュ条件を置き換える
+    _cachedConditions = searchConditions;
+
     Query query =
     engineer.where(FieldPath.documentId, isNotEqualTo: "sequenceNo");
 
@@ -622,78 +637,81 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       }
     }
 
-    QuerySnapshot allDocs = await query.get();
+    // ★ .get() → .snapshots() に変更。以降のフィルタ判定ロジックは完全に既存通り
+    _cachedStream = query.snapshots().map((allDocs) {
+      return allDocs.docs.where((doc) {
+        var data = doc.data() as Map<String, dynamic>;
+        if (searchConditions.getSearchSettingFlag != true) return true;
 
-    return allDocs.docs.where((doc) {
-      var data = doc.data() as Map<String, dynamic>;
-      if (searchConditions.getSearchSettingFlag != true) return true;
+        // 各カテゴリのAND判定（既存ロジック通り、変更なし）
+        bool processMatch = true;
+        if (searchConditions.getSearchSettingProcessFlag == true) {
+          processMatch = _checkExperience(
+              userItems: data["process"] ?? [],
+              userYears: data["process_experience"] ?? [],
+              searchSettings: searchConditions.getProcessSearchItemChecked!);
+        }
 
-      // 各カテゴリのAND判定（既存ロジック通り）
-      bool processMatch = true;
-      if (searchConditions.getSearchSettingProcessFlag == true) {
-        processMatch = _checkExperience(
-            userItems: data["process"] ?? [],
-            userYears: data["process_experience"] ?? [],
-            searchSettings: searchConditions.getProcessSearchItemChecked!);
-      }
+        bool teamRoleMatch = true;
+        if (searchConditions.getSearchSettingTeamRolesFlag == true) {
+          teamRoleMatch = _checkExperience(
+              userItems: data["team_role"] ?? [],
+              userYears: data["team_role_years"] ?? [],
+              searchSettings: searchConditions.getTeamRolesSearchItemChecked!);
+        }
 
-      bool teamRoleMatch = true;
-      if (searchConditions.getSearchSettingTeamRolesFlag == true) {
-        teamRoleMatch = _checkExperience(
-            userItems: data["team_role"] ?? [],
-            userYears: data["team_role_years"] ?? [],
-            searchSettings: searchConditions.getTeamRolesSearchItemChecked!);
-      }
+        bool codeLanguagesMatch = true;
+        if (searchConditions.getSearchSettingCodeLanguagesFlag == true) {
+          codeLanguagesMatch = _checkExperience(
+              userItems: data["code_languages"] ?? [],
+              userYears: data["code_languages_years"] ?? [],
+              searchSettings:
+              searchConditions.getCodeLanguagesSearchItemChecked!);
+        }
 
-      bool codeLanguagesMatch = true;
-      if (searchConditions.getSearchSettingCodeLanguagesFlag == true) {
-        codeLanguagesMatch = _checkExperience(
-            userItems: data["code_languages"] ?? [],
-            userYears: data["code_languages_years"] ?? [],
-            searchSettings:
-            searchConditions.getCodeLanguagesSearchItemChecked!);
-      }
+        bool dbExperienceMatch = true;
+        if (searchConditions.getSearchSettingDbExperienceFlag == true) {
+          dbExperienceMatch = _checkExperience(
+              userItems: data["db_experience"] ?? [],
+              userYears: data["db_experience_years"] ?? [],
+              searchSettings: searchConditions.getDbExperienceSearchItemChecked!);
+        }
 
-      bool dbExperienceMatch = true;
-      if (searchConditions.getSearchSettingDbExperienceFlag == true) {
-        dbExperienceMatch = _checkExperience(
-            userItems: data["db_experience"] ?? [],
-            userYears: data["db_experience_years"] ?? [],
-            searchSettings: searchConditions.getDbExperienceSearchItemChecked!);
-      }
+        bool osExperienceMatch = true;
+        if (searchConditions.getSearchSettingOsExperienceFlag == true) {
+          osExperienceMatch = _checkExperience(
+              userItems: data["os_experience"] ?? [],
+              userYears: data["os_experience_years"] ?? [],
+              searchSettings: searchConditions.getOsExperienceSearchItemChecked!);
+        }
 
-      bool osExperienceMatch = true;
-      if (searchConditions.getSearchSettingOsExperienceFlag == true) {
-        osExperienceMatch = _checkExperience(
-            userItems: data["os_experience"] ?? [],
-            userYears: data["os_experience_years"] ?? [],
-            searchSettings: searchConditions.getOsExperienceSearchItemChecked!);
-      }
+        bool cloudTechnologyMatch = true;
+        if (searchConditions.getSearchSettingCloudTechnologyFlag == true) {
+          cloudTechnologyMatch = _checkExperience(
+              userItems: data["cloud_technology"] ?? [],
+              userYears: data["cloud_technology_years"] ?? [],
+              searchSettings: searchConditions.getCloudTechnologySearchItemChecked!);
+        }
 
-      bool cloudTechnologyMatch = true;
-      if (searchConditions.getSearchSettingCloudTechnologyFlag == true) {
-        cloudTechnologyMatch = _checkExperience(
-            userItems: data["cloud_technology"] ?? [],
-            userYears: data["cloud_technology_years"] ?? [],
-            searchSettings: searchConditions.getCloudTechnologySearchItemChecked!);
-      }
+        bool toolMatch = true;
+        if (searchConditions.getSearchSettingToolFlag == true) {
+          toolMatch = _checkExperience(
+              userItems: data["tool"] ?? [],
+              userYears: data["tool_years"] ?? [],
+              searchSettings: searchConditions.getToolSearchItemChecked!);
+        }
 
-      bool toolMatch = true;
-      if (searchConditions.getSearchSettingToolFlag == true) {
-        toolMatch = _checkExperience(
-            userItems: data["tool"] ?? [],
-            userYears: data["tool_years"] ?? [],
-            searchSettings: searchConditions.getToolSearchItemChecked!);
-      }
+        return processMatch &&
+            teamRoleMatch &&
+            codeLanguagesMatch &&
+            dbExperienceMatch
+            && osExperienceMatch
+            && cloudTechnologyMatch
+            && toolMatch;
+      }).toList();
+    });
 
-      return processMatch &&
-          teamRoleMatch &&
-          codeLanguagesMatch &&
-          dbExperienceMatch
-          && osExperienceMatch
-          && cloudTechnologyMatch
-          && toolMatch;
-    }).toList();
+    return _cachedStream!;
   }
 
   bool _checkExperience(
