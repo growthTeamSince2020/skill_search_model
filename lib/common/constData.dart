@@ -4,6 +4,22 @@ class constData {
   // システム全体のバージョン
   static const String systemVersion = "1.0.0";
 
+  // システム名称
+  static const String systemName = 'Skirun';
+
+  // --- フォントサイズの一括管理 ---
+  static const double fontSizeSmall = 12.0;
+  static const double fontSizeMedium = 14.0;
+  static const double fontSizeLarge = 18.0;
+  static const double fontSizeTitle = 24.0;
+  static const double fontSizeDisplay = 32.0;
+
+  // --- レイアウト数値の一括管理 ---
+  static const double cardPadding = 24.0;
+  static const double elementSpacing = 16.0;
+  static const double borderRadius = 12.0;
+
+
   // 初回登録画面のベースURL (環境に合わせてここを書き換える)
   static const String setupBaseUrl = "https://skill-search-model.web.app/setup";
 

@@ -1,18 +1,18 @@
 {
-    "name": "スキル検索モデル",
-    "short_name": "スキル検索",
+    "name": "Skirun",
+    "short_name": "スキルン",
     "background_color": "#4CAF50",
     "theme_color": "#4CAF50",
 
     "__comment__": "以下は元の設定のバックアップです（プログラムには影響しません）",
-    "old_name": "skill_search_model",
-    "old_short_name": "skill_search_model",
+    "old_name": "Skirun",
+    "old_short_name": "Skirun",
     "old_background_color": "#0175C2",
     "old_theme_color": "#0175C2",
 
     "start_url": ".",
     "display": "standalone",
-    "description": "技術者スキル検索アプリ",
+    "description": "Skirun",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

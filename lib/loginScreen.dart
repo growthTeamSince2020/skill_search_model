@@ -30,7 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // Googleログイン (既存)
+  // Googleログイン
   Future<void> _loginWithGoogle() async {
     if (_isLoading) return;
     setState(() => _isLoading = true);
@@ -39,24 +39,15 @@ class _LoginScreenState extends State<LoginScreen> {
       provider.setCustomParameters({'prompt': 'select_account'});
       await FirebaseAuth.instance.signInWithPopup(provider);
     } on FirebaseAuthException catch (e) {
-      // e.toString() だけだと原因特定できないため、code/messageを明示的に出す。
-      // よくある原因:
-      //  - unauthorized-domain: Firebase Console > Authentication > Settings >
-      //    承認済みドメイン に現在アクセス中のドメインが登録されていない
-      //  - operation-not-allowed: Sign-in method で Google プロバイダが無効
-      //  - popup-blocked / popup-closed-by-user: ブラウザのポップアップブロック
       if (mounted) {
         _showSnackBar('Googleログイン失敗 [${e.code}]: ${e.message}');
       }
-      // ポップアップがブロックされた場合はリダイレクト方式にフォールバック
       if (e.code == 'popup-blocked' || e.code == 'popup-closed-by-user') {
         try {
           final provider = GoogleAuthProvider();
           provider.setCustomParameters({'prompt': 'select_account'});
           await FirebaseAuth.instance.signInWithRedirect(provider);
-        } catch (_) {
-          // リダイレクトも失敗した場合は元のエラーメッセージのみ表示済みなので何もしない
-        }
+        } catch (_) {}
       }
     } catch (e) {
       if (mounted) _showSnackBar('Googleログイン失敗: $e');
@@ -71,42 +62,57 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Center(
         child: SingleChildScrollView(
           child: Container(
             constraints: const BoxConstraints(maxWidth: 400),
-            padding: const EdgeInsets.all(32),
+            padding: const EdgeInsets.all(constData.cardPadding),
             child: Column(
               children: [
-                const Icon(Icons.search_rounded, size: 80, color: Colors.green),
-                const Text('Skill Search System', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green)),
+                // アイコンサイズを少し調整（タイトルの大きさに合わせる）
+                Icon(Icons.directions_run_rounded, size: 90, color: theme.primaryColor),
+
+                // ★ headlineLarge を適用してタイトルを大きく表示
+                Text(
+                  constData.systemName,
+                  style: theme.textTheme.headlineLarge?.copyWith(
+                    color: theme.primaryColor,
+                    letterSpacing: 1.2, // ロゴらしく少し文字間を広げる
+                  ),
+                ),
                 const SizedBox(height: 40),
 
-                // メールアドレス入力欄
                 TextField(
                   controller: _emailController,
-                  decoration: const InputDecoration(labelText: 'メールアドレス', border: OutlineInputBorder()),
+                  decoration: const InputDecoration(labelText: 'メールアドレス'),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: constData.elementSpacing),
                 TextField(
                   controller: _passwordController,
                   obscureText: true,
-                  decoration: const InputDecoration(labelText: 'パスワード', border: OutlineInputBorder()),
+                  decoration: const InputDecoration(labelText: 'パスワード'),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
 
-                // ★ 追加：パスワード再設定リンク
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () => Navigator.pushNamed(context, '/forgot_password'),
-                    child: const Text('パスワードを忘れた方はこちら', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    child: Text(
+                      'パスワードを忘れた方はこちら',
+                      style: TextStyle(
+                          fontSize: constData.fontSizeSmall,
+                          color: Colors.grey[600]
+                      ),
+                    ),
                   ),
                 ),
 
-                const SizedBox(height: 16), // 間隔を調整
+                const SizedBox(height: 24),
 
                 if (_isLoading)
                   const CircularProgressIndicator()
@@ -114,17 +120,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   ElevatedButton(
                     onPressed: _loginWithEmail,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(double.infinity, 50),
+                      minimumSize: const Size(double.infinity, 54), // 高さを少し出し押しやすく
                     ),
                     child: const Text('ログイン'),
                   ),
                   const SizedBox(height: 24),
-                  const Text('または'),
+                  Text('または', style: theme.textTheme.bodySmall),
                   const SizedBox(height: 24),
 
-                  // Googleログインボタン
                   OutlinedButton.icon(
                     onPressed: _loginWithGoogle,
                     icon: SizedBox(
@@ -132,28 +135,27 @@ class _LoginScreenState extends State<LoginScreen> {
                       height: 20,
                       child: Image.network(
                         'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
-                        width: 20,
-                        height: 20,
-                        // 読み込み中は同じサイズのプレースホルダーを表示し、
-                        // Rowの幅が確定するまでレイアウトが揺れないようにする
-                        loadingBuilder: (context, child, progress) {
-                          if (progress == null) return child;
-                          return const SizedBox(width: 20, height: 20);
-                        },
-                        // 読み込み失敗時もサイズを確保したままアイコンを省略
-                        errorBuilder: (context, error, stackTrace) =>
-                        const SizedBox(width: 20, height: 20),
+                        loadingBuilder: (context, child, progress) => progress == null ? child : const SizedBox(),
+                        errorBuilder: (context, error, stackTrace) => const SizedBox(),
                       ),
                     ),
-                    label: const Text(
-                      'Googleでサインイン',
-                      overflow: TextOverflow.ellipsis,
+                    label: const Text('Googleでサインイン'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 54),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(constData.borderRadius)
+                      ),
                     ),
-                    style: OutlinedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
                   ),
                 ],
-                const SizedBox(height: 40),
-                Text('Version ${constData.systemVersion}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                const SizedBox(height: 60),
+                Text(
+                  'Version ${constData.systemVersion}',
+                  style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: constData.fontSizeSmall
+                  ),
+                ),
               ],
             ),
           ),
