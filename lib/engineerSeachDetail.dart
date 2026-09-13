@@ -25,7 +25,7 @@ class _EngineerSeachDetailPageState extends State<EngineerSeachDetailPage> {
   static const bool _canDeleteEngineer = true;
 
   // 編集機能フラグ　編集更新機能　TRUE：可能、FALSE：不能
-  static const bool _canEditEngineer = false;
+  static const bool _canEditEngineer = true;
 
   @override
   void initState() {
