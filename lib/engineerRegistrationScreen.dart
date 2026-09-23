@@ -1,7 +1,9 @@
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:skill_search_model/utils/uiUtils.dart';
+import 'package:skill_search_model/utils/dataUtils.dart'; // ★ 共通ユーティリティをインポート
+import 'package:skill_search_model/permissionService.dart'; // ★ 権限サービスをインポート
 import 'common/constData.dart';
 
 class EngineerRegistrationScreen extends StatefulWidget {
@@ -18,17 +20,71 @@ class _EngineerRegistrationScreenState
     extends State<EngineerRegistrationScreen> {
   bool _isRegistering = false;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  String _companyName = ''; // 確認用に企業名を保持
 
-  // 登録ロジック (仕様維持)
+  // ★ 画面権限状態を保持する変数
+  ScreenPermissions? _perm;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCompanyInfo();
+
+    // ★ 画面に対する権限マトリクスを非同期でロード
+    PermissionService.instance.loadForScreen('engineerRegistrationScreen').then((p) {
+      if (mounted) {
+        setState(() => _perm = p);
+      }
+    });
+  }
+
+  // 初期化時に企業情報を取得（表示用）
+  Future<void> _loadCompanyInfo() async {
+    final info = await dateUtils.fetchMyCompanyInfo(_db);
+    if (mounted && info.errorMessage == null) {
+      setState(() {
+        _companyName = info.companyName;
+      });
+    }
+  }
+
+  // 登録ロジック
   Future<void> _registerEngineer() async {
+    // ★ クライアント側の最終防衛ライン。
+    // ボタン自体は下の AbsorbPointer で既に編集不可なら操作できなくしているが、
+    // 念のためここでも権限を再チェックしてから書き込みを行う。
+    final perm = _perm;
+    if (perm == null || !perm.canViewItem('この内容で登録するボタン') || !perm.canEditItem('この内容で登録するボタン')) {
+      UIUtils.showResultDialog(
+        context,
+        title: 'エラー',
+        message: 'この操作を行う権限がありません。',
+        isError: true,
+      );
+      return;
+    }
+
     FocusScope.of(context).unfocus();
     setState(() => _isRegistering = true);
+
     try {
-      final companyCode = await _fetchMyCompanyCode();
+      // 1. ログインユーザーの法人情報を取得 (共通ユーティリティを使用)
+      final companyInfo = await dateUtils.fetchMyCompanyInfo(_db);
+
+      if (companyInfo.errorMessage != null) {
+        throw Exception(companyInfo.errorMessage);
+      }
+
+      final myCompanyCode = companyInfo.companyCode.toString();
+
+      // 2. マスタデータとシーケンスIDを取得
       final masterDataMap = await _fetchAllMasters();
       final nextId = await UIUtils.getNextSequenceId(_db);
-      final dataToSave = _buildSaveData(nextId, masterDataMap, companyCode);
 
+      // 3. 保存用データの構築 (取得した myCompanyCode を渡す)
+      final dataToSave = _buildSaveData(nextId, masterDataMap, myCompanyCode);
+
+      // 4. Firestoreへ保存
       await _db.collection('engineer').add(dataToSave);
 
       if (!mounted) return;
@@ -38,6 +94,7 @@ class _EngineerRegistrationScreenState
         message: '技術者情報の登録が完了しました。',
         isError: false,
         onNext: () {
+          // 登録後は最初の画面（メニュー）まで戻る
           Navigator.popUntil(context, (route) => route.isFirst);
         },
       );
@@ -54,13 +111,7 @@ class _EngineerRegistrationScreenState
     }
   }
 
-  Future<String> _fetchMyCompanyCode() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return '';
-    final doc = await _db.collection('users').doc(uid).get();
-    return (doc.data()?['companyCode'] as String?) ?? '';
-  }
-
+  // 全マスタデータ取得 (仕様維持)
   Future<Map<String, List<String>>> _fetchAllMasters() async {
     const docsToFetch = constData.masterDocs;
     final refs = docsToFetch.map((id) => _db.collection('utilData').doc(id)).toList();
@@ -75,9 +126,12 @@ class _EngineerRegistrationScreenState
     return result;
   }
 
+  // 保存用データ生成
   Map<String, dynamic> _buildSaveData(
       int id, Map<String, List<String>> masters, String companyCode) {
     final d = widget.engineerData;
+
+    // スキル情報を数値配列に変換する共通ロジック
     Map<String, List<int>> convert(String key, String masterKey, String type) =>
         constData.convertDataToNumericArrays(d[key], masters[masterKey]!, type);
 
@@ -91,7 +145,7 @@ class _EngineerRegistrationScreenState
 
     return {
       'id': id,
-      'companyCode': companyCode,
+      'companyCode': companyCode, // ★ ここで法人コードを確実にセット
       'first_name': d['first_name']?.toString() ?? '',
       'last_name': d['last_name']?.toString() ?? '',
       'age': int.tryParse(d['age']?.toString() ?? '') ?? 0,
@@ -120,6 +174,14 @@ class _EngineerRegistrationScreenState
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final d = widget.engineerData;
+
+    // ★ 権限読み込み中・アクセス権なしの場合は、通常の確認画面より先にそちらを表示する。
+    if (_perm == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    if (!_perm!.canViewScreen) {
+      return const Scaffold(body: Center(child: Text('この画面にアクセスする権限がありません。')));
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFB),
@@ -159,13 +221,20 @@ class _EngineerRegistrationScreenState
                     children: [
                       _buildMainCard(d),
                       const SizedBox(height: 24),
-                      _buildSkillSection('チーム役割', d['team_role'], Icons.groups_outlined),
-                      _buildSkillSection('工程', d['processes'], Icons.account_tree_outlined),
-                      _buildSkillSection('経験言語', d['code_languages'], Icons.code_rounded),
-                      _buildSkillSection('DB経験', d['db_experience'], Icons.storage_rounded),
-                      _buildSkillSection('OS経験', d['os_experience'], Icons.memory_rounded),
-                      _buildSkillSection('クラウド技術', d['cloud_technology'], Icons.cloud_queue_rounded),
-                      _buildSkillSection('ツール', d['tool'], Icons.build_circle_outlined),
+                      if (_perm!.canViewItem('チーム役割'))
+                        _buildSkillSection('チーム役割', d['team_role'], Icons.groups_outlined),
+                      if (_perm!.canViewItem('工程'))
+                        _buildSkillSection('工程', d['processes'], Icons.account_tree_outlined),
+                      if (_perm!.canViewItem('経験言語'))
+                        _buildSkillSection('経験言語', d['code_languages'], Icons.code_rounded),
+                      if (_perm!.canViewItem('DB経験'))
+                        _buildSkillSection('DB経験', d['db_experience'], Icons.storage_rounded),
+                      if (_perm!.canViewItem('OS経験'))
+                        _buildSkillSection('OS経験', d['os_experience'], Icons.memory_rounded),
+                      if (_perm!.canViewItem('クラウド技術'))
+                        _buildSkillSection('クラウド技術', d['cloud_technology'], Icons.cloud_queue_rounded),
+                      if (_perm!.canViewItem('ツール'))
+                        _buildSkillSection('ツール', d['tool'], Icons.build_circle_outlined),
                       const SizedBox(height: 40),
                       _buildActionButtons(),
                       const SizedBox(height: 50),
@@ -184,13 +253,15 @@ class _EngineerRegistrationScreenState
     width: double.infinity,
     padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
     color: constData.themeGreen.withOpacity(0.05),
-    child: const Row(
+    child: Row(
       children: [
-        Icon(Icons.info_outline, color: constData.themeGreen, size: 20),
+        const Icon(Icons.info_outline, color: constData.themeGreen, size: 20),
         const SizedBox(width: 12),
-        Text(
-          '以下の内容で登録します。よろしいですか？',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: constData.themeGreen),
+        Expanded(
+          child: Text(
+            '所属企業: $_companyName として以下の内容で登録します。',
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: constData.themeGreen),
+          ),
         ),
       ],
     ),
@@ -205,11 +276,12 @@ class _EngineerRegistrationScreenState
     return UIUtils.buildFormSection(
       child: Column(
         children: [
-          _infoRow(Icons.person_outline, '氏名', '${d['last_name']} ${d['first_name']}'),
-          const Divider(height: 24),
-          _infoRow(Icons.cake_outlined, '年齢', '${d['age']} 歳'),
-          const Divider(height: 24),
-          _infoRow(Icons.train_outlined, '最寄', '${d['nearest_station_line_name'] ?? ''} $stationName'),
+          if (_perm!.canViewItem('氏名')) _infoRow(Icons.person_outline, '氏名', '${d['last_name']} ${d['first_name']}'),
+          if (_perm!.canViewItem('氏名') && _perm!.canViewItem('年齢')) const Divider(height: 24),
+          if (_perm!.canViewItem('年齢')) _infoRow(Icons.cake_outlined, '年齢', '${d['age']} 歳'),
+          if (_perm!.canViewItem('年齢') && _perm!.canViewItem('最寄')) const Divider(height: 24),
+          if (_perm!.canViewItem('最寄'))
+            _infoRow(Icons.train_outlined, '最寄', '${d['nearest_station_line_name'] ?? ''} $stationName'),
         ],
       ),
     );
@@ -263,18 +335,33 @@ class _EngineerRegistrationScreenState
 
   Widget _buildActionButtons() => Column(
     children: [
-      UIUtils.buildPrimaryButton(
-        label: 'この内容で登録する',
-        onPressed: _registerEngineer,
-      ),
-      const SizedBox(height: 12),
-      SizedBox(
-        width: double.infinity,
-        child: TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('入力をやり直す', style: TextStyle(color: Colors.black54, fontWeight: FontWeight.bold)),
+      if (_perm!.canViewItem('この内容で登録するボタン'))
+        Opacity(
+          opacity: _perm!.canEditItem('この内容で登録するボタン') ? 1.0 : 0.5,
+          child: AbsorbPointer(
+            absorbing: !_perm!.canEditItem('この内容で登録するボタン'),
+            child: UIUtils.buildPrimaryButton(
+              label: 'この内容で登録する',
+              onPressed: _registerEngineer,
+            ),
+          ),
         ),
-      ),
+      const SizedBox(height: 12),
+      if (_perm!.canViewItem('入力をやり直すボタン'))
+        Opacity(
+          opacity: _perm!.canEditItem('入力をやり直すボタン') ? 1.0 : 0.5,
+          child: AbsorbPointer(
+            absorbing: !_perm!.canEditItem('入力をやり直すボタン'),
+            child: SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('入力をやり直す', style: TextStyle(color: Colors.black54, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ),
+        ),
     ],
   );
 }
+ 

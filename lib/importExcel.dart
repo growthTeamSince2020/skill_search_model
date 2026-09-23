@@ -3,10 +3,15 @@ import 'package:excel/excel.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:skill_search_model/utils/uiUtils.dart';
 import 'common/constData.dart';
-class ExcelImporter {
-  // ★ クラス内にあった static const List<String> ... はすべて削除します
 
-  static Future<String> import(Uint8List bytes) async {
+class ExcelImporter {
+  // ★ クラス内にあった static const List<String> ... はすべて削除済み
+
+  /// Excelデータを取り込みFirestoreに保存する
+  ///
+  /// @param bytes Excelファイルのバイトデータ
+  /// @param companyCode ログイン中ユーザーの法人コード
+  static Future<String> import(Uint8List bytes, String companyCode) async {
     final excel = Excel.decodeBytes(bytes);
     final db = FirebaseFirestore.instance;
     int count = 0;
@@ -89,6 +94,7 @@ class ExcelImporter {
 
       await db.collection('engineer').add({
         'id': nextId,
+        'companyCode': companyCode, // ★ 追加：ログインユーザーの法人コードをセット
         'last_name': lastName,
         'first_name': firstName,
         'age': age,

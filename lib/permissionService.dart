@@ -88,15 +88,10 @@ class PermissionService {
   String? _cachedRole;
   Future<String>? _roleFuture;
 
-  /// スクリーン単位の permissionMatrix ドキュメントのキャッシュ。
-  /// screenKey -> 取得済みドキュメントデータ
-  final Map<String, Map<String, dynamic>?> _screenDataCache = {};
-
   /// テスト・ログアウト時などにキャッシュをクリアしたい場合に呼ぶ。
   void clearCache() {
     _cachedRole = null;
     _roleFuture = null;
-    _screenDataCache.clear();
   }
 
   Future<String> _getMyRole() {
@@ -114,19 +109,16 @@ class PermissionService {
     return role;
   }
 
+  /// permissionMatrix は権限設定画面からいつでも変更されうるため、
+  /// キャッシュはせず毎回Firestoreから取得する（変更が即座に反映されるように）。
   Future<Map<String, dynamic>?> _fetchScreenData(String screenKey) async {
-    if (_screenDataCache.containsKey(screenKey)) {
-      return _screenDataCache[screenKey];
-    }
     final query = await FirebaseFirestore.instance
         .collection(_collection)
         .where('screenKey', isEqualTo: screenKey)
         .limit(1)
         .get();
 
-    final data = query.docs.isEmpty ? null : query.docs.first.data();
-    _screenDataCache[screenKey] = data;
-    return data;
+    return query.docs.isEmpty ? null : query.docs.first.data();
   }
 
   /// 指定した [screenKey] に対応する permissionMatrix ドキュメントを取得し、

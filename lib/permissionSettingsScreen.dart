@@ -127,40 +127,18 @@ class _PermissionSettingsScreenState extends State<PermissionSettingsScreen> {
     return FutureBuilder<DocumentSnapshot>(
       future: _userFuture,
       builder: (context, userSnapshot) {
-        // 1. ロード中の表示（骨格だけ表示してインジケータを回す）
-        if (userSnapshot.connectionState == ConnectionState.waiting) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('権限設定', style: TextStyle(fontWeight: FontWeight.bold))),
-            body: const Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        // 2. エラー発生時の表示
-        if (userSnapshot.hasError) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('権限設定')),
-            body: Center(child: Text('エラーが発生しました: ${userSnapshot.error}')),
-          );
-        }
-
-        // 3. データ取得後のロール判定
+        final bool roleLoaded = userSnapshot.connectionState == ConnectionState.done;
         final userData = userSnapshot.data?.data() as Map<String, dynamic>?;
         final String myRole = userData?['role'] ?? constData.roleMember;
-
-        // admin または owner であればアクセス許可
-        final bool hasAccess = (myRole == constData.roleOwner || myRole == constData.roleAdmin);
+        final bool hasAccess = roleLoaded && (myRole == constData.roleOwner || myRole == constData.roleAdmin);
+        // ○/―の切替（書き込み）は owner・admin 双方に許可
+        // （owner列自体は admin ログイン時には非表示になるため、
+        //   admin が実際に編集できるのは member/admin 列のみ）
         final bool canEdit = hasAccess;
         final List<String> visibleRoles = _visibleRoles(myRole);
 
-        // 4. 権限がない場合の表示
-        if (!hasAccess) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('権限設定')),
-            body: const Center(child: Text('この画面にアクセスする権限がありません。')),
-          );
-        }
-
-        // 5. 正常系（権限あり）の表示
+        // Scaffold/AppBar は常に同じ骨格で返す（ロード中・エラー・表示中で
+        // ウィジェットツリーの形自体が変わらないようにし、レイアウトシフトを防ぐ）。
         return Scaffold(
           appBar: AppBar(
             title: const Text('権限設定', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -168,6 +146,8 @@ class _PermissionSettingsScreenState extends State<PermissionSettingsScreen> {
             elevation: 0,
             iconTheme: const IconThemeData(color: Colors.black87),
             actions: [
+              // ロール判定が完了する前から領域を確保しておくことで、
+              // ボタンが後から出現して周辺のレイアウトが動く（CLS）のを防ぐ。
               Visibility(
                 visible: canEdit,
                 maintainSize: true,
@@ -178,12 +158,16 @@ class _PermissionSettingsScreenState extends State<PermissionSettingsScreen> {
                   color: Colors.black87,
                   size: 22,
                   tooltip: '画面を追加',
-                  onPressed: () => _showAddScreenDialog(context),
+                  onPressed: canEdit ? () => _showAddScreenDialog(context) : null,
                 ),
               ),
             ],
           ),
-          body: StreamBuilder<QuerySnapshot>(
+          body: !roleLoaded
+              ? const Center(child: CircularProgressIndicator())
+              : !hasAccess
+              ? const Center(child: Text('この画面にアクセスする権限がありません。'))
+              : StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance.collection(_collection).orderBy('order').snapshots(),
             builder: (context, snapshot) {
               if (snapshot.hasError) {

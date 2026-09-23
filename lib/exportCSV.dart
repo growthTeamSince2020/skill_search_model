@@ -1,9 +1,11 @@
 import 'dart:convert';
-import 'dart:io'; // htmlの代わりにioを使用
+import 'dart:io';
+import 'dart:typed_data'; // ★ 追加
+import 'package:flutter/foundation.dart'; // ★ kIsWeb のために追加
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:csv/csv.dart';
 import 'package:intl/intl.dart';
-import 'package:file_picker/file_picker.dart'; // 追加
+import 'package:file_picker/file_picker.dart';
 
 class CSVExporter {
   // マスタデータ（変更なし）
@@ -90,19 +92,22 @@ class CSVExporter {
     final List<int> excelBom = [0xEF, 0xBB, 0xBF];
     final List<int> combinedBytes = [...excelBom, ...utf8.encode(csvData)];
 
-    // 5. 保存 (macOSデスクトップ対応版)
+    // 5. 保存 (Web / デスクトップ両対応版)
     try {
-      // FilePicker.platform.saveFile でエラーが出る場合は .platform を消してください
+      final timestamp = DateFormat('yyyyMMddHHmmss').format(DateTime.now());
+      final fileName = "engineer_export_$timestamp.csv";
+
+      // FilePickerに bytes を渡すことで Web/デスクトップ 両方で自動書き込み・ダウンロードが行われます
       String? outputFile = await FilePicker.saveFile(
         dialogTitle: 'CSVファイルの保存先を選択してください',
-        fileName: "engineer_export_${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.csv",
+        fileName: fileName,
         type: FileType.custom,
         allowedExtensions: ['csv'],
+        bytes: Uint8List.fromList(combinedBytes), // ★ Web環境および自動保存のために必須
       );
 
-      if (outputFile != null) {
-        final file = File(outputFile);
-        await file.writeAsBytes(combinedBytes);
+      // Web環境では dart:io の File クラスを触るとエラーになるため、kIsWeb でガード
+      if (!kIsWeb && outputFile != null) {
         print("CSV保存完了: $outputFile");
       }
     } catch (e) {
