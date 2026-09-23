@@ -55,8 +55,11 @@ class CSVImporter {
    *
    * 大量データに対応するためWriteBatchを使用し、1件でも不備があれば全ロールバックします。
    * シーケンス番号(sequenceNo)の取得にはUIUtilsの共通メソッドを使用します。
+   *
+   * @param fileBytes CSVファイルのバイトデータ
+   * @param companyCode ログイン中ユーザーの法人コード
    */
-  static Future<String> import(Uint8List fileBytes) async {
+  static Future<String> import(Uint8List fileBytes, String companyCode) async {
     try {
       String csvData = utf8.decode(fileBytes, allowMalformed: true);
       if (csvData.startsWith('\uFEFF')) csvData = csvData.substring(1);
@@ -88,8 +91,6 @@ class CSVImporter {
       final batch = firestore.batch();
 
       // --- sequenceNo の取得（共通ユーティリティを使用） ---
-      // UIUtils.getNextSequenceId は内部でトランザクションを行い、ドキュメントがなければ作成します。
-      // インポート開始時のベースとなる番号を取得します。
       int startId = await UIUtils.getNextSequenceId(firestore);
       int currentSeq = startId;
 
@@ -125,6 +126,7 @@ class CSVImporter {
         }
 
         data['id'] = currentSeq;
+        data['companyCode'] = companyCode; // ★ ログインユーザーの法人コードを自動設定
         data['registration_date'] = FieldValue.serverTimestamp();
         data['update_date'] = FieldValue.serverTimestamp();
 
@@ -137,7 +139,7 @@ class CSVImporter {
       final seqRef = firestore.collection('engineer').doc('sequenceNo');
       batch.update(seqRef, {'currentId': currentSeq});
 
-      // 一括書き込み（ここで失敗すれば、ここまでの設定は一切反映されない）
+      // 一括書き込み
       await batch.commit();
 
       return "成功: $importCount 件のデータを取り込みました。";

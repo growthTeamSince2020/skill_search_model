@@ -1,5 +1,6 @@
-import 'dart:io'; // htmlの代わりにioを使う
+import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart'; // ★ kIsWeb のために追加
 import 'package:excel/excel.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
@@ -51,21 +52,30 @@ class ExcelExporter {
       cCol = _writeData(sheet, rowIndex, cCol, constData.toolItems, data['tool'], data['tool_years'], constData.toolYearsList);
     }
 
-    // --- 3. 保存 (macOS/デスクトップ対応版) ---
-    var fileBytes = excel.save();
+    // --- 3. 保存 (Web / デスクトップ両対応版) ---
+    final now = DateTime.now();
+    final timestamp = "${now.year}"
+        "${now.month.toString().padLeft(2, '0')}"
+        "${now.day.toString().padLeft(2, '0')}"
+        "${now.hour.toString().padLeft(2, '0')}"
+        "${now.minute.toString().padLeft(2, '0')}"
+        "${now.second.toString().padLeft(2, '0')}";
+    final fileName = 'engineer_export_$timestamp.xlsx';
+
+    var fileBytes = excel.save(fileName: fileName);
+
     if (fileBytes != null) {
       try {
-        // platform を削除して直接 saveFile を呼び出す
         String? outputFile = await FilePicker.saveFile(
           dialogTitle: 'エクスポートファイルの保存先を選択してください',
-          fileName: 'engineer_export.xlsx',
+          fileName: fileName,
           type: FileType.custom,
           allowedExtensions: ['xlsx'],
+          bytes: Uint8List.fromList(fileBytes), // ★ Web環境および自動保存のために必須
         );
 
-        if (outputFile != null) {
-          final file = File(outputFile);
-          await file.writeAsBytes(fileBytes);
+        // Web環境では dart:io の File クラスの処理を行わないようガード
+        if (!kIsWeb && outputFile != null) {
           print("保存完了: $outputFile");
         }
       } catch (e) {
@@ -74,7 +84,7 @@ class ExcelExporter {
     }
   }
 
-  // --- 以下、補助メソッド（修正なし） ---
+  // --- 以下、補助メソッド（変更なし） ---
   static void _setDoubleHeader(Sheet sheet, int col, String title) {
     sheet.updateCell(CellIndex.indexByColumnRow(columnIndex: col, rowIndex: 0), TextCellValue(title));
     sheet.updateCell(CellIndex.indexByColumnRow(columnIndex: col, rowIndex: 1), TextCellValue(""));

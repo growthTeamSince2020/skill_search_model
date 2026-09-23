@@ -29,7 +29,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
   int _selectedIndex = 0;
   bool _isSidebarVisible = true;
 
-  // メニューアイテムの定義
+  // メメニューアイテムの定義
   final List<Map<String, dynamic>> menuItems = [
     {'icon': Icons.dashboard_outlined, 'activeIcon': Icons.dashboard, 'title': 'ダッシュボード'},
     {'icon': Icons.person_add_alt_1_outlined, 'activeIcon': Icons.person_add_alt_1, 'title': '技術者登録', 'page': const EngineerInputForm(), 'roleRequired': 'editor'},
@@ -78,12 +78,10 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
                         _handleNavigation(selectedItem);
                       },
                       children: [
-                        // --- 修正箇所：アイコンロゴセクション ---
                         Padding(
                           padding: const EdgeInsets.fromLTRB(28, 32, 16, 24),
                           child: Row(
                             children: [
-                              // 元のアイコンに戻しました
                               const Icon(
                                 Icons.directions_run_rounded,
                                 color: constData.themeGreen,
@@ -109,7 +107,6 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
 
                         const Divider(indent: 24, endIndent: 24, height: 40),
 
-                        // ユーザープロフィールセクション
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: ListTile(
@@ -173,7 +170,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
                       SliverToBoxAdapter(
                         child: Padding(
                           padding: const EdgeInsets.all(constData.cardPadding),
-                          child: _buildDashboardContent(theme),
+                          child: _buildDashboardContent(theme, appUser), // ★ 修正：appUser を渡す
                         ),
                       ),
                     ],
@@ -212,12 +209,17 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
     }
   }
 
-  // 以降の _buildDashboardContent, _buildRegistrationChart 等は変更なしのため省略可能です
-  // (ご提示のコードを引き継いでください)
+  // ★ 修正：引数に appUser を追加
+  Widget _buildDashboardContent(ThemeData theme, dynamic appUser) {
+    // ログインユーザーの法人コードを取得（String型に安全に変換）
+    final myCompanyCode = appUser?.companyCode?.toString() ?? '';
 
-  Widget _buildDashboardContent(ThemeData theme) {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('engineer').snapshots(),
+      // ★ 修正：法人コードが一致する技術者のみをリタイム監視するクエリに変更
+      stream: FirebaseFirestore.instance
+          .collection('engineer')
+          .where('companyCode', isEqualTo: myCompanyCode)
+          .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: LinearProgressIndicator(color: constData.themeGreen));
         if (!snapshot.hasData) return const SizedBox.shrink();
@@ -227,12 +229,12 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
 
         int totalCount = docs.length;
         int thisMonthNewCount = 0;
-        Map<int, int> monthlyCounts = {};
-        List<int> lastSixMonths = [];
 
+        List<DateTime> lastSixMonthsDates = [];
+        List<int> lastSixMonths = [];
         for (int i = 5; i >= 0; i--) {
           final date = DateTime(now.year, now.month - i, 1);
-          monthlyCounts[date.month] = 0;
+          lastSixMonthsDates.add(date);
           lastSixMonths.add(date.month);
         }
 
@@ -241,13 +243,26 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
           final regDate = data['registration_date'] as Timestamp?;
           if (regDate != null) {
             final date = regDate.toDate();
-            if (date.year == now.year && date.month == now.month) thisMonthNewCount++;
-            if (monthlyCounts.containsKey(date.month)) monthlyCounts[date.month] = monthlyCounts[date.month]! + 1;
+            if (date.year == now.year && date.month == now.month) {
+              thisMonthNewCount++;
+            }
           }
         }
 
-        final List<FlSpot> lineDataReg = List.generate(lastSixMonths.length, (i) {
-          return FlSpot(i.toDouble(), monthlyCounts[lastSixMonths[i]]!.toDouble());
+        final List<FlSpot> lineDataReg = List.generate(lastSixMonthsDates.length, (i) {
+          final targetMonth = lastSixMonthsDates[i];
+          int monthlyNewCount = 0;
+          for (var doc in docs) {
+            final data = doc.data() as Map<String, dynamic>;
+            final regDate = data['registration_date'] as Timestamp?;
+            if (regDate != null) {
+              final date = regDate.toDate();
+              if (date.year == targetMonth.year && date.month == targetMonth.month) {
+                monthlyNewCount++;
+              }
+            }
+          }
+          return FlSpot(i.toDouble(), monthlyNewCount.toDouble());
         });
 
         return Column(
@@ -282,7 +297,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
                       style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)
                   ),
                   const SizedBox(height: 40),
-                  _buildRegistrationChart(lastSixMonths, lineDataReg),
+                  _buildRegistrationChart(lastSixMonths, lineDataReg, totalCount),
                 ],
               ),
             ),
@@ -292,12 +307,11 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
     );
   }
 
-  Widget _buildRegistrationChart(List<int> lastSixMonths, List<FlSpot> lineDataReg) {
-    double maxYValue = 0;
-    if (lineDataReg.isNotEmpty) {
-      maxYValue = lineDataReg.map((s) => s.y).reduce((a, b) => a > b ? a : b);
-    }
-    double chartMaxY = maxYValue < 5 ? 5 : maxYValue + 1;
+  Widget _buildRegistrationChart(List<int> lastSixMonths, List<FlSpot> lineDataReg, int totalCount) {
+    double maxYValue = totalCount.toDouble();
+    double chartMaxY = ((maxYValue / 10).ceil() * 10).toDouble();
+    if (chartMaxY < 10) chartMaxY = 10;
+    double sideInterval = chartMaxY / 5;
 
     return Container(
       height: 240,
@@ -308,7 +322,6 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
           maxX: 5,
           minY: 0,
           maxY: chartMaxY,
-
           lineTouchData: LineTouchData(
             touchTooltipData: LineTouchTooltipData(
               getTooltipColor: (spot) => constData.themeGreen.withOpacity(0.9),
@@ -318,7 +331,6 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
               )).toList(),
             ),
           ),
-
           titlesData: FlTitlesData(
             rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
             topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -326,7 +338,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
               sideTitles: SideTitles(
                 showTitles: true,
                 reservedSize: 35,
-                interval: 1,
+                interval: sideInterval,
                 getTitlesWidget: (v, meta) => SideTitleWidget(
                   meta: meta,
                   child: Text(
@@ -356,18 +368,16 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
               ),
             ),
           ),
-
           gridData: FlGridData(
             show: true,
             drawVerticalLine: false,
+            horizontalInterval: sideInterval,
             getDrawingHorizontalLine: (value) => FlLine(
               color: Colors.grey.withOpacity(0.05),
               strokeWidth: 1,
             ),
           ),
-
           borderData: FlBorderData(show: false),
-
           lineBarsData: [
             LineChartBarData(
               spots: lineDataReg,

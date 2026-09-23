@@ -3,10 +3,11 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:skill_search_model/utils/dataUtils.dart';
 import 'package:skill_search_model/utils/uiUtils.dart';
 import 'package:csv/csv.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:skill_search_model/common/constData.dart'; // ★ 追加
+import 'package:skill_search_model/common/constData.dart';
 
 import 'exportCSV.dart';
 import 'exportExcel.dart';
@@ -26,11 +27,29 @@ class _CsvImportExportScreenState extends State<CsvImportExportScreen> {
   String _importMessage = '';
   int _selectedFormat = 0; // 0: CSV, 1: Excel
 
-  // --- エクスポート処理 (仕様維持) ---
+  // --- エクスポート処理 ---
   Future<void> _exportData() async {
     setState(() => _isExporting = true);
     try {
-      final snapshot = await FirebaseFirestore.instance.collection('engineer').orderBy('id').get();
+      // ログインユーザーの所属企業情報を取得
+      final companyInfo = await dateUtils.fetchMyCompanyInfo(FirebaseFirestore.instance);
+
+      if (companyInfo.errorMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("企業情報の取得に失敗しました: ${companyInfo.errorMessage}")),
+        );
+        return;
+      }
+
+      final myCompanyCode = companyInfo.companyCode.toString();
+
+      // 自身の法人コードに一致するデータのみを取得
+      final snapshot = await FirebaseFirestore.instance
+          .collection('engineer')
+          .where('companyCode', isEqualTo: myCompanyCode)
+          .orderBy('id')
+          .get();
+
       final docs = snapshot.docs.where((doc) => doc.id != 'sequenceNo').toList();
 
       if (_selectedFormat == 0) {
@@ -45,7 +64,7 @@ class _CsvImportExportScreenState extends State<CsvImportExportScreen> {
     }
   }
 
-  // --- ファイル選択処理 (仕様維持) ---
+  // --- ファイル選択処理 ---
   Future<void> _pickAndImportFile() async {
     try {
       List<String> allowedExtensions = _selectedFormat == 0 ? ['csv'] : ['xlsx'];
@@ -63,7 +82,7 @@ class _CsvImportExportScreenState extends State<CsvImportExportScreen> {
     }
   }
 
-  // --- インポート実行処理 (仕様維持) ---
+  // --- インポート実行処理 ---
   Future<void> _importData(Uint8List fileBytes) async {
     setState(() {
       _isImporting = true;
@@ -71,11 +90,22 @@ class _CsvImportExportScreenState extends State<CsvImportExportScreen> {
     });
 
     try {
+      // 1. ログインユーザーの所属企業情報を取得
+      final companyInfo = await dateUtils.fetchMyCompanyInfo(FirebaseFirestore.instance);
+
+      if (companyInfo.errorMessage != null) {
+        throw Exception(companyInfo.errorMessage);
+      }
+
+      final myCompanyCode = companyInfo.companyCode.toString();
+
       String result;
       if (_selectedFormat == 0) {
-        result = await CSVImporter.import(fileBytes);
+        // 2. 取得した法人コードを渡す
+        result = await CSVImporter.import(fileBytes, myCompanyCode);
       } else {
-        result = await ExcelImporter.import(fileBytes);
+        // ExcelImporter側も第2引数を受け取れるように修正されている前提
+        result = await ExcelImporter.import(fileBytes, myCompanyCode);
       }
 
       setState(() => _importMessage = result);
@@ -91,7 +121,7 @@ class _CsvImportExportScreenState extends State<CsvImportExportScreen> {
       await UIUtils.showResultDialog(
         context,
         title: 'エラー',
-        message: e.toString(),
+        message: e.toString().replaceAll('Exception: ', ''),
         isError: true,
       );
     } finally {
@@ -160,7 +190,7 @@ class _CsvImportExportScreenState extends State<CsvImportExportScreen> {
                 _buildModernCard(
                   icon: Icons.cloud_download_rounded,
                   title: '${_selectedFormat == 0 ? "CSV" : "Excel"}でエクスポート',
-                  description: '全ての技術者データを一括ダウンロードします。\nバックアップや二次利用にご活用ください。',
+                  description: '所属企業の技術者データを一括ダウンロードします。',
                   isLoading: _isExporting,
                   buttonLabel: 'ダウンロード開始',
                   onPressed: _exportData,
@@ -172,7 +202,7 @@ class _CsvImportExportScreenState extends State<CsvImportExportScreen> {
                 _buildModernCard(
                   icon: Icons.cloud_upload_rounded,
                   title: '${_selectedFormat == 0 ? "CSV" : "Excel"}からインポート',
-                  description: 'ファイルを選択してデータを一括更新します。\n※技術者Noをキーにして上書き保存されます。',
+                  description: 'ファイルを選択してデータを一括更新します。\n※ログイン中の法人コードで登録されます。',
                   isLoading: _isImporting,
                   buttonLabel: 'ファイルを選択',
                   onPressed: _pickAndImportFile,
@@ -187,7 +217,6 @@ class _CsvImportExportScreenState extends State<CsvImportExportScreen> {
     );
   }
 
-  // Skirunデザインに合わせたカードビルダー
   Widget _buildModernCard({
     required IconData icon,
     required String title,
