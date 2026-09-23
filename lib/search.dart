@@ -1,7 +1,10 @@
+import 'dart:developer';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skill_search_model/seachDetail.dart';
+import 'package:skill_search_model/utils/dataUtils.dart';
 import 'package:skill_search_model/utils/uiUtils.dart';
 import 'engineerSeachDetail.dart';
 import 'model/searchConditionsDto.dart';
@@ -15,6 +18,10 @@ class SearchPage extends ConsumerStatefulWidget {
 
 class _SearchPageState extends ConsumerState<SearchPage> {
   int totalCount = 0;
+  String _myCompanyCode = "";
+  // フィールド追加
+  String? _cachedCompanyCode;
+
   final CollectionReference engineer =
   FirebaseFirestore.instance.collection('engineer');
   late SearchConditionsDto searchConditions;
@@ -145,6 +152,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     super.initState();
     // 画面起動時にデータを取得
     _fetchData();
+    _loadMyCompanyInfo();
   }
 
   // Firestoreからマスターデータを取得する処理
@@ -168,6 +176,27 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
     if (mounted) {
       setState(() {}); // 取得後に再描画
+    }
+  }
+  // Firestoreから会社情報を取得する処理
+  Future<void> _loadMyCompanyInfo() async {
+    try {
+      final result = await dataUtils.fetchMyCompanyInfo(FirebaseFirestore.instance);
+      setState(() {
+        _myCompanyCode = result.companyCode;
+        log("会社コード取得成功 : [" + result.companyCode+ "]");
+      });
+    } catch (e) {
+      bool _isLoading;
+      setState(() => _isLoading = false);
+      if (mounted) {
+        UIUtils.showResultDialog(
+          context,
+          title: 'エラー',
+          message: e.toString().replaceFirst('Exception: ', ''),
+          isError: true,
+        );
+      }
     }
   }
 
@@ -616,15 +645,24 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     // 検索条件のインスタンスが変わっていなければ、既存のStreamを再利用する
     if (_cachedStream != null &&
         //全く同じメモリ上のインスタンス（同一のオブジェクト）」 であるかを判定、同一なら真
-        identical(_cachedConditions, searchConditions)) {
+        identical(_cachedConditions, searchConditions)
+        &&
+        _cachedCompanyCode == _myCompanyCode) {
       //!はNon-nullableと明示するために使う。！を入れないとNull可能性でコンパイルエラーになる
       return _cachedStream!;
     }
     //条件が新しい（前の条件と同一でない）場合、キャッシュ条件を置き換える
     _cachedConditions = searchConditions;
+    _cachedCompanyCode = _myCompanyCode;
 
     Query query =
     engineer.where(FieldPath.documentId, isNotEqualTo: "sequenceNo");
+
+    // ★追加: 会社コードがあれば絞り込み
+    if (_myCompanyCode.isNotEmpty) {
+      log("絞り込みの会社コード:"+_myCompanyCode);
+      query = query.where("companyCode", isEqualTo: _myCompanyCode);
+    }
 
     if (searchConditions.getSearchSettingFlag == true) {
       if (searchConditions.getAgeDropdownSelectedValue! > 0) {
