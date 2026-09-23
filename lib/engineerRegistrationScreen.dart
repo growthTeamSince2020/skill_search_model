@@ -40,7 +40,7 @@ class _EngineerRegistrationScreenState
 
   // 初期化時に企業情報を取得（表示用）
   Future<void> _loadCompanyInfo() async {
-    final info = await dateUtils.fetchMyCompanyInfo(_db);
+    final info = await dataUtils.fetchMyCompanyInfo(_db);
     if (mounted && info.errorMessage == null) {
       setState(() {
         _companyName = info.companyName;
@@ -69,7 +69,7 @@ class _EngineerRegistrationScreenState
 
     try {
       // 1. ログインユーザーの法人情報を取得 (共通ユーティリティを使用)
-      final companyInfo = await dateUtils.fetchMyCompanyInfo(_db);
+      final companyInfo = await dataUtils.fetchMyCompanyInfo(_db);
 
       if (companyInfo.errorMessage != null) {
         throw Exception(companyInfo.errorMessage);

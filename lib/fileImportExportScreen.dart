@@ -32,7 +32,7 @@ class _CsvImportExportScreenState extends State<CsvImportExportScreen> {
     setState(() => _isExporting = true);
     try {
       // ログインユーザーの所属企業情報を取得
-      final companyInfo = await dateUtils.fetchMyCompanyInfo(FirebaseFirestore.instance);
+      final companyInfo = await dataUtils.fetchMyCompanyInfo(FirebaseFirestore.instance);
 
       if (companyInfo.errorMessage != null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -91,7 +91,7 @@ class _CsvImportExportScreenState extends State<CsvImportExportScreen> {
 
     try {
       // 1. ログインユーザーの所属企業情報を取得
-      final companyInfo = await dateUtils.fetchMyCompanyInfo(FirebaseFirestore.instance);
+      final companyInfo = await dataUtils.fetchMyCompanyInfo(FirebaseFirestore.instance);
 
       if (companyInfo.errorMessage != null) {
         throw Exception(companyInfo.errorMessage);
